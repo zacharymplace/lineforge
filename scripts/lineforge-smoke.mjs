@@ -294,7 +294,7 @@ function serializeReviewPacketJson(packet) {
 
 function renderReviewPacketMarkdown(packet) {
   const lines = [
-    `# LineForge ${packet.sourceType === "card" ? "Card" : "Move"} Review Packet`,
+    `# ${getReviewPacketTitle(packet)}`,
     "",
     `Source: ${packet.sourceType}`,
     packet.sourceGameName ? `Game: ${packet.sourceGameName}` : undefined,
@@ -345,6 +345,14 @@ function renderReviewPacketMarkdown(packet) {
   ].filter((line) => line !== undefined);
 
   return `${lines.join("\n")}\n`;
+}
+
+function getReviewPacketTitle(packet) {
+  const source = packet.sourceType === "card" ? "Card" : "Move";
+  const move = packet.moveSan ? ` ${packet.moveSan}` : "";
+  const ply = packet.ply ? `, ply ${packet.ply}` : "";
+
+  return `LineForge ${source} Review Packet${move}${ply}`;
 }
 
 function safeFilenamePart(value) {
@@ -864,6 +872,7 @@ const moveMarkdown = renderReviewPacketMarkdown(movePacket);
 assert.match(moveMarkdown, /LineForge Move Review Packet/);
 assert.match(moveMarkdown, /## Review summary/);
 assert.match(moveMarkdown, /Engine prefers Nc6 at depth 10/);
+assert.equal(getReviewPacketTitle(movePacket), "LineForge Move Review Packet Nc6, ply 4");
 assert.equal(
   getReviewPacketFilename(movePacket, "json"),
   "lineforge-move-2026-07-03-ply-4.json",
@@ -1089,6 +1098,7 @@ const cardMarkdown = renderReviewPacketMarkdown(cardPacket);
 assert.match(cardMarkdown, /LineForge Card Review Packet/);
 assert.match(cardMarkdown, /## Review history/);
 assert.match(cardMarkdown, /Attempts: 3/);
+assert.equal(getReviewPacketTitle(cardPacket), "LineForge Card Review Packet Nc6, ply 4");
 assert.equal(
   getReviewPacketFilename(cardPacket, "markdown"),
   "lineforge-card-2026-07-03-packet-card-smoke.md",

@@ -9,7 +9,7 @@ export function serializeReviewPacketJson(packet: ReviewPacket) {
 
 export function renderReviewPacketMarkdown(packet: ReviewPacket) {
   const lines = [
-    `# ${getPacketTitle(packet)}`,
+    `# ${getReviewPacketTitle(packet)}`,
     "",
     `Created: ${formatAnalysisTimestamp(packet.createdAt)}`,
     `Source: ${packet.sourceType}`,
@@ -53,7 +53,9 @@ export function getReviewPacketFilename(
   format: ReviewPacketExportFormat,
 ) {
   const extension = format === "json" ? "json" : "md";
-  const date = safeFilenamePart(packet.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10));
+  const date = safeFilenamePart(
+    packet.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  );
 
   if (packet.sourceType === "card") {
     return `lineforge-card-${date}-${safeFilenamePart(packet.id)}.${extension}`;
@@ -94,7 +96,7 @@ export function safeFilenamePart(value: string) {
   return safe || "unknown";
 }
 
-function getPacketTitle(packet: ReviewPacket) {
+export function getReviewPacketTitle(packet: ReviewPacket) {
   const source = packet.sourceType === "card" ? "Card" : "Move";
   const move = packet.moveSan ? ` ${packet.moveSan}` : "";
   const ply = packet.ply ? `, ply ${packet.ply}` : "";

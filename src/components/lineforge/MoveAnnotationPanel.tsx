@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MISTAKE_TAGS, MOVE_VERDICTS, type LineForgeGame } from "@/lib/move-ledger/types";
 import type { MistakeCard, MoveAnnotation, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
 import { emptyAnnotation, toggleTag } from "@/lib/move-ledger/annotations";
@@ -10,7 +11,8 @@ import {
 } from "@/lib/engine/local-engine";
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import { buildMoveReviewPacket } from "@/lib/review-packets/build";
-import { downloadReviewPacket } from "@/lib/review-packets/export";
+import type { ReviewPacket } from "@/lib/review-packets/types";
+import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 
 type MoveAnnotationPanelProps = {
@@ -28,6 +30,8 @@ export function MoveAnnotationPanel({
 }: MoveAnnotationPanelProps) {
   const move = currentPly > 0 ? game.moves[currentPly - 1] : null;
   const annotation = game.annotations[currentPly] ?? emptyAnnotation(currentPly);
+  const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   function updateAnnotation(update: Partial<MoveAnnotation>) {
     onSaveAnnotation({
@@ -38,23 +42,30 @@ export function MoveAnnotationPanel({
     });
   }
 
-  function handleExportPacket(format: "json" | "markdown") {
+  function handlePreviewPacket() {
     if (!move) {
       return;
     }
 
-    downloadReviewPacket(
-      buildMoveReviewPacket({
-        sourceGameId: game.id,
-        sourceGameName: game.name,
-        ply: currentPly,
-        fenBefore: move.before,
-        fenAfter: move.after,
-        moveSan: move.san,
-        annotation,
-      }),
-      format,
-    );
+    try {
+      setPreviewPacket(
+        buildMoveReviewPacket({
+          sourceGameId: game.id,
+          sourceGameName: game.name,
+          ply: currentPly,
+          fenBefore: move.before,
+          fenAfter: move.after,
+          moveSan: move.san,
+          annotation,
+        }),
+      );
+      setExportError(null);
+    } catch (error) {
+      setPreviewPacket(null);
+      setExportError(
+        error instanceof Error ? error.message : "Could not generate that review packet.",
+      );
+    }
   }
 
   return (
@@ -112,21 +123,15 @@ export function MoveAnnotationPanel({
         <button className="lf-button-primary" disabled={!move} onClick={onCreateCard}>
           Create mistake card
         </button>
-        <button
-          className="lf-button"
-          disabled={!move}
-          onClick={() => handleExportPacket("json")}
-        >
-          Export move packet JSON
-        </button>
-        <button
-          className="lf-button"
-          disabled={!move}
-          onClick={() => handleExportPacket("markdown")}
-        >
-          Export move packet MD
+        <button className="lf-button" disabled={!move} onClick={handlePreviewPacket}>
+          Export move packet
         </button>
       </div>
+      {exportError ? (
+        <div className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100">
+          {exportError}
+        </div>
+      ) : null}
 
       {annotation.engineAnalysis ? (
         <div className="grid gap-3">
@@ -150,6 +155,13 @@ export function MoveAnnotationPanel({
             })}
           />
         </div>
+      ) : null}
+
+      {previewPacket ? (
+        <ReviewPacketPreviewModal
+          packet={previewPacket}
+          onClose={() => setPreviewPacket(null)}
+        />
       ) : null}
     </section>
   );

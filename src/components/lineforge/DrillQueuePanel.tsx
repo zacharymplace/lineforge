@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { getSuccessRate } from "@/lib/drill-queue/review";
 import {
@@ -10,7 +11,8 @@ import {
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 import { buildCardReviewPacket } from "@/lib/review-packets/build";
-import { downloadReviewPacket } from "@/lib/review-packets/export";
+import type { ReviewPacket } from "@/lib/review-packets/types";
+import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 
 type DrillQueuePanelProps = {
@@ -47,22 +49,31 @@ export function DrillQueuePanel({
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const selectedAttempts = selectedCard?.attemptHistory ?? [];
   const lastAttempt = selectedAttempts.at(-1);
+  const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
 
-  function handleExportPacket(format: "json" | "markdown") {
+  function handlePreviewPacket() {
     if (!selectedCard) {
       return;
     }
 
-    downloadReviewPacket(
-      buildCardReviewPacket({
-        sourceGameName: selectedCardGameName,
-        card: selectedCard,
-      }),
-      format,
-    );
+    try {
+      setPreviewPacket(
+        buildCardReviewPacket({
+          sourceGameName: selectedCardGameName,
+          card: selectedCard,
+        }),
+      );
+      setExportError(null);
+    } catch (error) {
+      setPreviewPacket(null);
+      setExportError(
+        error instanceof Error ? error.message : "Could not generate that review packet.",
+      );
+    }
   }
 
   return (
@@ -119,13 +130,15 @@ export function DrillQueuePanel({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button className="lf-button" onClick={() => handleExportPacket("json")}>
-                Export card packet JSON
-              </button>
-              <button className="lf-button" onClick={() => handleExportPacket("markdown")}>
-                Export card packet MD
+              <button className="lf-button" onClick={handlePreviewPacket}>
+                Export card packet
               </button>
             </div>
+            {exportError ? (
+              <div className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100">
+                {exportError}
+              </div>
+            ) : null}
             <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
               <Chessboard
                 options={{
@@ -265,6 +278,13 @@ export function DrillQueuePanel({
           </div>
         ) : null}
       </div>
+
+      {previewPacket ? (
+        <ReviewPacketPreviewModal
+          packet={previewPacket}
+          onClose={() => setPreviewPacket(null)}
+        />
+      ) : null}
     </section>
   );
 }
