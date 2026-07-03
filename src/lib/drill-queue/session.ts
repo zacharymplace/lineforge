@@ -23,6 +23,9 @@ export type ReviewSessionResult = {
   cardId: string;
   result: ReviewResult | "skipped";
   recordedAt: string;
+  attemptedMoveSan?: string;
+  attemptedFenAfter?: string;
+  expectedMoveSan?: string;
 };
 
 export type ReviewSession = {
@@ -57,6 +60,25 @@ export type ReviewSessionSummary = {
   topMissedTags: Array<{ tag: MistakeTag; count: number }>;
   verdictBreakdown: Array<{ verdict: MoveVerdict; count: number }>;
   recommendedNextAction: string;
+  results?: ReviewSessionResult[];
+};
+
+export type ReviewSessionResultDetail = {
+  cardId: string;
+  label: string;
+  result: ReviewSessionResult["result"];
+  recordedAt: string;
+  tags: MistakeTag[];
+  verdict?: MoveVerdict;
+  attemptedMoveSan?: string;
+  expectedMoveSan?: string;
+};
+
+export type ReviewSessionDetail = {
+  summary: ReviewSessionSummary;
+  filterLabel: string;
+  isMissedOnlyRepeat: boolean;
+  resultDetails: ReviewSessionResultDetail[];
 };
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -126,7 +148,7 @@ export function buildMissedOnlyRepeatSession(
   cards: MistakeCard[],
   summary: ReviewSessionSummary,
 ): ReviewSession | null {
-  const missedCardIds = [...new Set(summary.missedCardIds)];
+  const missedCardIds = getMissedCardIdsFromSessionSummary(summary);
   const missedCards = missedCardIds
     .map((cardId) => cards.find((card) => card.id === cardId))
     .filter((card): card is MistakeCard => Boolean(card));
@@ -142,6 +164,10 @@ export function recordReviewSessionResult(
   session: ReviewSession,
   cardId: string,
   result: ReviewSessionResult["result"],
+  details: Pick<
+    ReviewSessionResult,
+    "attemptedMoveSan" | "attemptedFenAfter" | "expectedMoveSan"
+  > = {},
 ): ReviewSession {
   if (session.completedAt || !session.selectedCardIds.includes(cardId)) {
     return session;
@@ -153,6 +179,7 @@ export function recordReviewSessionResult(
       cardId,
       result,
       recordedAt: new Date().toISOString(),
+      ...details,
     },
   };
   const currentIndex = session.cards.findIndex((card) => card.cardId === cardId);
@@ -205,6 +232,9 @@ export function completeReviewSession(
     topMissedTags: getTopMissedTags(session, sessionCards),
     verdictBreakdown: getVerdictBreakdown(sessionCards),
     recommendedNextAction: getRecommendedNextAction(session, sessionCards),
+    results: session.selectedCardIds
+      .map((cardId) => session.results[cardId])
+      .filter((result): result is ReviewSessionResult => Boolean(result)),
   };
 }
 
@@ -230,6 +260,70 @@ export function loadReviewSessionSummaries(storage?: StorageLike | null): Review
 
 export function clearReviewSessionSummaries(storage?: StorageLike | null) {
   getStorage(storage)?.removeItem(SESSION_SUMMARIES_KEY);
+}
+
+export function getReviewSessionDetail(
+  summary: ReviewSessionSummary,
+  cards: MistakeCard[],
+): ReviewSessionDetail {
+  return {
+    summary,
+    filterLabel: getReviewSessionFilterLabel(summary.filter),
+    isMissedOnlyRepeat: summary.filter.type === "missed-only-repeat",
+    resultDetails: getReviewSessionResultDetails(summary, cards),
+  };
+}
+
+export function getMissedCardIdsFromSessionSummary(summary: ReviewSessionSummary) {
+  const missedCardIds =
+    summary.missedCardIds ??
+    summary.results
+      ?.filter((result) => result.result === "missed")
+      .map((result) => result.cardId) ??
+    [];
+
+  return [...new Set(missedCardIds)];
+}
+
+export function getReviewSessionResultDetails(
+  summary: ReviewSessionSummary,
+  cards: MistakeCard[],
+): ReviewSessionResultDetail[] {
+  const results: ReviewSessionResult[] =
+    summary.results && summary.results.length > 0
+      ? summary.results
+      : summary.selectedCardIds.map((cardId) => ({
+          cardId,
+          result: getMissedCardIdsFromSessionSummary(summary).includes(cardId)
+            ? "missed"
+            : "skipped",
+          recordedAt: summary.completedAt,
+        }) satisfies ReviewSessionResult);
+
+  return results.map((result) => {
+    const card = cards.find((currentCard) => currentCard.id === result.cardId);
+
+    return {
+      cardId: result.cardId,
+      label: card ? `Ply ${card.ply}: ${card.moveSan}` : result.cardId,
+      result: result.result,
+      recordedAt: result.recordedAt,
+      tags: card?.tags ?? [],
+      verdict: card?.verdict,
+      attemptedMoveSan: result.attemptedMoveSan,
+      expectedMoveSan: result.expectedMoveSan ?? card?.moveSan,
+    };
+  });
+}
+
+export function getReviewSessionFilterLabel(filter: ReviewSessionFilter) {
+  if (filter.type === "verdict") return `Verdict: ${filter.verdict}`;
+  if (filter.type === "tag") return `Tag: ${filter.tag}`;
+  if (filter.type === "missed-recently") return "Missed recently";
+  if (filter.type === "lowest-success-rate") return "Lowest success rate";
+  if (filter.type === "most-recent") return "Most recent cards";
+  if (filter.type === "missed-only-repeat") return "Missed-only repeat";
+  return "All cards";
 }
 
 export function getSessionDashboardStats(summaries: ReviewSessionSummary[]) {

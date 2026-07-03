@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { CoachLensComparison } from "./CoachLensComparison";
+import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
 import {
@@ -17,6 +18,7 @@ import {
   recordReviewSessionResult,
   type ReviewSession,
   type ReviewSessionFilter,
+  type ReviewSessionResult,
   type ReviewSessionSize,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
@@ -32,8 +34,10 @@ import {
 type ReviewSessionPanelProps = {
   cards: MistakeCard[];
   comparisonLensIds: CoachLensId[];
+  sessionSummaries?: ReviewSessionSummary[];
   onRecordCardReview: (cardId: string, result: ReviewResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
+  onClearSessionHistory?: () => void;
 };
 
 type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat">;
@@ -41,8 +45,10 @@ type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat">;
 export function ReviewSessionPanel({
   cards,
   comparisonLensIds,
+  sessionSummaries = [],
   onRecordCardReview,
   onCompleteSession,
+  onClearSessionHistory,
 }: ReviewSessionPanelProps) {
   const [filterKind, setFilterKind] = useState<FilterKind>("all");
   const [filterVerdict, setFilterVerdict] = useState<MoveVerdict>("mistake");
@@ -73,7 +79,13 @@ export function ReviewSessionPanel({
     setLastSummary(null);
   }
 
-  function recordResult(result: ReviewResult | "skipped") {
+  function recordResult(
+    result: ReviewResult | "skipped",
+    details: Pick<
+      ReviewSessionResult,
+      "attemptedMoveSan" | "attemptedFenAfter" | "expectedMoveSan"
+    > = {},
+  ) {
     if (!session || !currentCard) {
       return;
     }
@@ -82,7 +94,10 @@ export function ReviewSessionPanel({
       onRecordCardReview(currentCard.id, result);
     }
 
-    const nextSession = recordReviewSessionResult(session, currentCard.id, result);
+    const nextSession = recordReviewSessionResult(session, currentCard.id, result, {
+      expectedMoveSan: currentCard.moveSan,
+      ...details,
+    });
     setSession(nextSession);
 
     if (nextSession.currentCardIndex >= nextSession.selectedCardIds.length) {
@@ -107,12 +122,17 @@ export function ReviewSessionPanel({
     }
 
     const result = evaluateDrillMove(currentCard, sourceSquare, targetSquare);
-    recordResult(result.reviewResult);
+    recordResult(result.reviewResult, {
+      attemptedMoveSan: result.attemptedSan ?? undefined,
+      attemptedFenAfter: result.attemptedFenAfter ?? undefined,
+      expectedMoveSan: result.expectedSan,
+    });
     return result.isMatch;
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <>
+      <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
       <div>
         <h2 className="text-lg font-semibold text-stone-100">Review session</h2>
         <p className="text-sm text-stone-500">Drill a filtered queue of mistake cards.</p>
@@ -279,7 +299,14 @@ export function ReviewSessionPanel({
           }
         />
       ) : null}
-    </section>
+      </section>
+      <ReviewSessionHistoryPanel
+        summaries={sessionSummaries}
+        cards={cards}
+        onReviewMissedAgain={startMissedOnlyRepeatSession}
+        onClearHistory={onClearSessionHistory ?? (() => undefined)}
+      />
+    </>
   );
 }
 

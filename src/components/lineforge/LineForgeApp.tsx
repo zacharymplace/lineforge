@@ -22,6 +22,7 @@ import {
   evaluateDrillMove,
 } from "@/lib/drill-queue/review";
 import {
+  clearReviewSessionSummaries,
   loadReviewSessionSummaries,
   saveReviewSessionSummary,
   type ReviewSessionSummary,
@@ -349,6 +350,11 @@ export function LineForgeApp() {
     setSessionSummaries(saveReviewSessionSummary(summary));
   }
 
+  function handleClearSessionHistory() {
+    clearReviewSessionSummaries();
+    setSessionSummaries([]);
+  }
+
   function handleAttemptMove(
     card: MistakeCard,
     sourceSquare: string,
@@ -531,8 +537,10 @@ export function LineForgeApp() {
         <ReviewSessionPanel
           cards={cards}
           comparisonLensIds={comparisonLensIds}
+          sessionSummaries={sessionSummaries}
           onRecordCardReview={handleSessionCardReview}
           onCompleteSession={handleCompleteSession}
+          onClearSessionHistory={handleClearSessionHistory}
         />
         <DrillQueuePanel
           cards={cards}

@@ -48,6 +48,9 @@ function createMemoryStorage(initial = {}) {
     setItem(key, value) {
       values.set(key, value);
     },
+    removeItem(key) {
+      values.delete(key);
+    },
   };
 }
 
@@ -716,7 +719,7 @@ function buildReviewSession(cards, filter, size = 10) {
 }
 
 function buildMissedOnlyRepeatSession(cards, summary) {
-  const missedCardIds = [...new Set(summary.missedCardIds)];
+  const missedCardIds = getMissedCardIdsFromSessionSummary(summary);
   const missedCards = missedCardIds
     .map((cardId) => cards.find((card) => card.id === cardId))
     .filter(Boolean);
@@ -727,13 +730,14 @@ function buildMissedOnlyRepeatSession(cards, summary) {
   );
 }
 
-function recordReviewSessionResult(session, cardId, result) {
+function recordReviewSessionResult(session, cardId, result, details = {}) {
   const results = {
     ...session.results,
     [cardId]: {
       cardId,
       result,
       recordedAt: new Date().toISOString(),
+      ...details,
     },
   };
   const currentIndex = session.cards.findIndex((card) => card.cardId === cardId);
@@ -778,7 +782,67 @@ function completeReviewSession(session, cards) {
     topMissedTags,
     verdictBreakdown: getVerdictBreakdown(sessionCards),
     recommendedNextAction: getSessionRecommendation(session, sessionCards),
+    results: session.selectedCardIds
+      .map((cardId) => session.results[cardId])
+      .filter(Boolean),
   };
+}
+
+function getMissedCardIdsFromSessionSummary(summary) {
+  const missedCardIds =
+    summary.missedCardIds ??
+    summary.results?.filter((result) => result.result === "missed").map((result) => result.cardId) ??
+    [];
+
+  return [...new Set(missedCardIds)];
+}
+
+function getReviewSessionFilterLabel(filter) {
+  if (filter.type === "verdict") return `Verdict: ${filter.verdict}`;
+  if (filter.type === "tag") return `Tag: ${filter.tag}`;
+  if (filter.type === "missed-recently") return "Missed recently";
+  if (filter.type === "lowest-success-rate") return "Lowest success rate";
+  if (filter.type === "most-recent") return "Most recent cards";
+  if (filter.type === "missed-only-repeat") return "Missed-only repeat";
+  return "All cards";
+}
+
+function getReviewSessionResultDetails(summary, cards) {
+  const results =
+    summary.results?.length > 0
+      ? summary.results
+      : summary.selectedCardIds.map((cardId) => ({
+          cardId,
+          result: getMissedCardIdsFromSessionSummary(summary).includes(cardId) ? "missed" : "skipped",
+          recordedAt: summary.completedAt,
+        }));
+
+  return results.map((result) => {
+    const detailCard = cards.find((currentCard) => currentCard.id === result.cardId);
+    return {
+      cardId: result.cardId,
+      label: detailCard ? `Ply ${detailCard.ply}: ${detailCard.moveSan}` : result.cardId,
+      result: result.result,
+      recordedAt: result.recordedAt,
+      tags: detailCard?.tags ?? [],
+      verdict: detailCard?.verdict,
+      attemptedMoveSan: result.attemptedMoveSan,
+      expectedMoveSan: result.expectedMoveSan ?? detailCard?.moveSan,
+    };
+  });
+}
+
+function getReviewSessionDetail(summary, cards) {
+  return {
+    summary,
+    filterLabel: getReviewSessionFilterLabel(summary.filter),
+    isMissedOnlyRepeat: summary.filter.type === "missed-only-repeat",
+    resultDetails: getReviewSessionResultDetails(summary, cards),
+  };
+}
+
+function selectReviewSessionSummary(summaries, sessionId) {
+  return summaries.find((summary) => summary.id === sessionId) ?? summaries[0] ?? null;
 }
 
 function getTopMissedTags(session, cards) {
@@ -827,6 +891,10 @@ function loadReviewSessionSummaries(storage) {
   } catch {
     return [];
   }
+}
+
+function clearReviewSessionSummaries(storage) {
+  storage?.removeItem(sessionSummariesKey);
 }
 
 function createEmptyLibrary(activeGameId = null) {
@@ -1730,7 +1798,10 @@ assert.equal(
   "session-card-blunder",
 );
 let recordedSession = recordReviewSessionResult(allSession, manualReviewed.id, "remembered");
-recordedSession = recordReviewSessionResult(recordedSession, "session-card-blunder", "missed");
+recordedSession = recordReviewSessionResult(recordedSession, "session-card-blunder", "missed", {
+  attemptedMoveSan: "Nf6",
+  expectedMoveSan: manualReviewed.moveSan,
+});
 recordedSession = recordReviewSessionResult(recordedSession, "session-card-good", "skipped");
 assert.equal(recordedSession.rememberedCount, 1);
 assert.equal(recordedSession.missedCount, 1);
@@ -1740,23 +1811,46 @@ assert.equal(sessionSummary.sessionCardCount, 3);
 assert.equal(sessionSummary.totalReviewed, 3);
 assert.equal(sessionSummary.successRate, 50);
 assert.deepEqual(sessionSummary.missedCardIds, ["session-card-blunder"]);
+assert.equal(sessionSummary.results.length, 3);
+assert.equal(sessionSummary.results[1].attemptedMoveSan, "Nf6");
+assert.equal(sessionSummary.results[1].expectedMoveSan, manualReviewed.moveSan);
 assert.equal(sessionSummary.topMissedTags[0].tag, "king safety");
 assert.equal(sessionSummary.recommendedNextAction, "Review king safety cards before your next game.");
+const selectedHistoricalSummary = selectReviewSessionSummary([sessionSummary], sessionSummary.id);
+assert.equal(selectedHistoricalSummary.id, sessionSummary.id);
+const sessionDetail = getReviewSessionDetail(sessionSummary, sessionCardSet);
+assert.equal(sessionDetail.filterLabel, "All cards");
+assert.equal(sessionDetail.isMissedOnlyRepeat, false);
+assert.equal(sessionDetail.resultDetails.length, 3);
+assert.equal(sessionDetail.resultDetails[1].label, `Ply 4: ${manualReviewed.moveSan}`);
+assert.equal(sessionDetail.resultDetails[1].result, "missed");
+assert.deepEqual(sessionDetail.resultDetails[1].tags, ["king safety"]);
+assert.equal(sessionDetail.resultDetails[1].verdict, "blunder");
+assert.equal(sessionDetail.resultDetails[1].attemptedMoveSan, "Nf6");
+assert.equal(sessionDetail.resultDetails[1].expectedMoveSan, manualReviewed.moveSan);
+assert.deepEqual(getMissedCardIdsFromSessionSummary(sessionSummary), ["session-card-blunder"]);
 const repeatSession = buildMissedOnlyRepeatSession(sessionCardSet, {
   ...sessionSummary,
   missedCardIds: ["session-card-blunder", "session-card-blunder", "missing-card"],
 });
 assert.deepEqual(repeatSession.selectedCardIds, ["session-card-blunder"]);
 assert.equal(repeatSession.filter.type, "missed-only-repeat");
+const repeatFromHistory = buildMissedOnlyRepeatSession(sessionCardSet, sessionSummary);
+assert.deepEqual(repeatFromHistory.selectedCardIds, ["session-card-blunder"]);
 const repeatSummary = completeReviewSession(
   recordReviewSessionResult(repeatSession, "session-card-blunder", "remembered"),
   sessionCardSet,
 );
+assert.equal(getReviewSessionDetail(repeatSummary, sessionCardSet).isMissedOnlyRepeat, true);
 const sessionStorage = createMemoryStorage();
 saveReviewSessionSummary(sessionSummary, sessionStorage);
 saveReviewSessionSummary(repeatSummary, sessionStorage);
 assert.equal(loadReviewSessionSummaries(sessionStorage)[0].id, repeatSummary.id);
 assert.equal(loadReviewSessionSummaries(sessionStorage)[1].id, sessionSummary.id);
+const cardsBeforeClear = JSON.stringify(sessionCardSet);
+clearReviewSessionSummaries(sessionStorage);
+assert.equal(loadReviewSessionSummaries(sessionStorage).length, 0);
+assert.equal(JSON.stringify(sessionCardSet), cardsBeforeClear);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",
