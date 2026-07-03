@@ -668,6 +668,32 @@ function filterSessionCards(cards, filter) {
   return cards;
 }
 
+const reviewSessionSizeOptions = [5, 10, 15, "all"];
+const reviewSessionSizePreferenceKey = "lineforge.drillQueue.sessionSize.v1";
+
+function isValidReviewSessionSize(value) {
+  return reviewSessionSizeOptions.includes(value);
+}
+
+function normalizeReviewSessionSize(value) {
+  if (value === "all") {
+    return "all";
+  }
+
+  const numericValue = typeof value === "number" ? value : Number(value);
+  return isValidReviewSessionSize(numericValue) ? numericValue : 10;
+}
+
+function loadReviewSessionSizePreference(storage) {
+  return normalizeReviewSessionSize(storage?.getItem(reviewSessionSizePreferenceKey));
+}
+
+function saveReviewSessionSizePreference(size, storage) {
+  const normalized = normalizeReviewSessionSize(size);
+  storage?.setItem(reviewSessionSizePreferenceKey, String(normalized));
+  return normalized;
+}
+
 function buildReviewSession(cards, filter, size = 10) {
   const filteredCards = filterSessionCards(cards, filter);
   const selectedCards =
@@ -1667,6 +1693,27 @@ const largeSessionCardSet = Array.from({ length: 6 }, (_, index) => ({
 }));
 const allSession = buildReviewSession(sessionCardSet, { type: "all" });
 assert.equal(allSession.selectedCardIds.length, 3);
+assert.equal(normalizeReviewSessionSize(5), 5);
+assert.equal(normalizeReviewSessionSize("15"), 15);
+assert.equal(normalizeReviewSessionSize("all"), "all");
+assert.equal(normalizeReviewSessionSize("nope"), 10);
+assert.equal(isValidReviewSessionSize(10), true);
+assert.equal(isValidReviewSessionSize("all"), true);
+assert.equal(isValidReviewSessionSize(7), false);
+const validSessionSizeStorage = createMemoryStorage({ [reviewSessionSizePreferenceKey]: "5" });
+assert.equal(loadReviewSessionSizePreference(validSessionSizeStorage), 5);
+const allSessionSizeStorage = createMemoryStorage({ [reviewSessionSizePreferenceKey]: "all" });
+assert.equal(loadReviewSessionSizePreference(allSessionSizeStorage), "all");
+const invalidSessionSizeStorage = createMemoryStorage({ [reviewSessionSizePreferenceKey]: "20" });
+assert.equal(loadReviewSessionSizePreference(invalidSessionSizeStorage), 10);
+const malformedSessionSizeStorage = createMemoryStorage({ [reviewSessionSizePreferenceKey]: "{ nope" });
+assert.equal(loadReviewSessionSizePreference(malformedSessionSizeStorage), 10);
+const missingSessionSizeStorage = createMemoryStorage();
+assert.equal(loadReviewSessionSizePreference(missingSessionSizeStorage), 10);
+assert.equal(saveReviewSessionSizePreference("15", missingSessionSizeStorage), 15);
+assert.equal(missingSessionSizeStorage.getItem(reviewSessionSizePreferenceKey), "15");
+assert.equal(saveReviewSessionSizePreference("all", missingSessionSizeStorage), "all");
+assert.equal(missingSessionSizeStorage.getItem(reviewSessionSizePreferenceKey), "all");
 assert.equal(buildReviewSession(largeSessionCardSet, { type: "all" }, 5).selectedCardIds.length, 5);
 assert.equal(buildReviewSession(sessionCardSet, { type: "all" }, 15).selectedCardIds.length, 3);
 assert.equal(buildReviewSession(sessionCardSet, { type: "all" }, "all").selectedCardIds.length, 3);

@@ -6,6 +6,10 @@ import { CoachLensComparison } from "./CoachLensComparison";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
 import {
+  loadReviewSessionSizePreference,
+  saveReviewSessionSizePreference,
+} from "@/lib/drill-queue/session-preferences";
+import {
   REVIEW_SESSION_SIZE_OPTIONS,
   buildMissedOnlyRepeatSession,
   buildReviewSession,
@@ -43,7 +47,9 @@ export function ReviewSessionPanel({
   const [filterKind, setFilterKind] = useState<FilterKind>("all");
   const [filterVerdict, setFilterVerdict] = useState<MoveVerdict>("mistake");
   const [filterTag, setFilterTag] = useState<MistakeTag>("missed tactic");
-  const [sessionSize, setSessionSize] = useState<ReviewSessionSize>(10);
+  const [sessionSize, setSessionSize] = useState<ReviewSessionSize>(() =>
+    loadReviewSessionSizePreference(),
+  );
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [lastSummary, setLastSummary] = useState<ReviewSessionSummary | null>(null);
   const filter = useMemo(
@@ -170,13 +176,7 @@ export function ReviewSessionPanel({
               <select
                 className="lf-field"
                 value={String(sessionSize)}
-                onChange={(event) =>
-                  setSessionSize(
-                    event.target.value === "all"
-                      ? "all"
-                      : (Number(event.target.value) as ReviewSessionSize),
-                  )
-                }
+                onChange={(event) => setSessionSize(saveReviewSessionSizePreference(event.target.value))}
               >
                 {REVIEW_SESSION_SIZE_OPTIONS.map((size) => (
                   <option key={size} value={String(size)}>
