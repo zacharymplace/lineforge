@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useId, useRef } from "react";
 import {
   downloadReviewPacket,
   getReviewPacketFilename,
@@ -15,31 +16,63 @@ type ReviewPacketPreviewModalProps = {
 };
 
 export function ReviewPacketPreviewModal({ packet, onClose }: ReviewPacketPreviewModalProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const markdownPreview = renderReviewPacketMarkdown(packet);
   const jsonPreview = serializeReviewPacketJson(packet);
 
+  useEffect(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      onClose();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-6">
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-black/70 px-4 py-6">
       <div
-        className="grid max-h-[90vh] w-full max-w-3xl gap-4 overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-4 shadow-2xl"
+        className="grid max-h-[90vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-4 shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="review-packet-preview-title"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-800 pb-3">
           <div>
             <h2
-              id="review-packet-preview-title"
+              id={titleId}
               className="text-lg font-semibold text-amber-100"
             >
               {getReviewPacketTitle(packet)}
             </h2>
-            <p className="text-sm text-stone-500">
+            <p id={descriptionId} className="text-sm text-stone-500">
               {packet.sourceType === "card" ? "Mistake card packet" : "Move packet"} ·{" "}
               {packet.sourceGameName ?? packet.sourceGameId ?? "Local LineForge data"}
             </p>
           </div>
-          <button className="lf-button" onClick={onClose}>
+          <button ref={closeButtonRef} className="lf-button" onClick={onClose}>
             Close
           </button>
         </div>

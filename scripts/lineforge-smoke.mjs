@@ -884,10 +884,17 @@ const fallbackPacket = buildMoveReviewPacket({
   annotation: { ...annotation, engineAnalysis: undefined },
 });
 assert.equal(fallbackPacket.lineforgeReviewPacketVersion, 1);
+assert.equal(fallbackPacket.sourceType, "move");
 assert.ok(
   fallbackPacket.reviewSummary.points.some(
     (point) => point.text === "No engine analysis is saved for this position yet.",
   ),
+);
+assert.match(renderReviewPacketMarkdown(fallbackPacket), /FEN before: Unknown/);
+assert.equal(JSON.parse(serializeReviewPacketJson(fallbackPacket)).moveSan, undefined);
+assert.equal(
+  getReviewPacketFilename(fallbackPacket, "markdown"),
+  "lineforge-move-2026-07-03-ply-0.md",
 );
 
 const serializedGames = JSON.parse(JSON.stringify([game]));
