@@ -9,6 +9,7 @@ import { GameImportPanel } from "./GameImportPanel";
 import { GameLibraryPanel } from "./GameLibraryPanel";
 import { MistakeDashboard } from "./MistakeDashboard";
 import { MoveAnnotationPanel } from "./MoveAnnotationPanel";
+import { ReviewSessionPanel } from "./ReviewSessionPanel";
 import { DEFAULT_COACH_LENS_COMPARISON_IDS } from "@/lib/coach-lenses/lenses";
 import {
   loadComparisonLensPreference,
@@ -20,6 +21,11 @@ import {
   createDrillAttempt,
   evaluateDrillMove,
 } from "@/lib/drill-queue/review";
+import {
+  loadReviewSessionSummaries,
+  saveReviewSessionSummary,
+  type ReviewSessionSummary,
+} from "@/lib/drill-queue/session";
 import {
   attachAnalysisToAnnotation,
   attachAnalysisToCard,
@@ -70,6 +76,7 @@ export function LineForgeApp() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
   const [attemptResult, setAttemptResult] = useState<DrillAttemptResult | null>(null);
+  const [sessionSummaries, setSessionSummaries] = useState<ReviewSessionSummary[]>([]);
   const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
     DEFAULT_COACH_LENS_COMPARISON_IDS,
   );
@@ -93,6 +100,7 @@ export function LineForgeApp() {
       setCurrentPly(activeGame.moves.length);
       setCards(storedCards);
       setSelectedCardId(storedCards[0]?.id ?? null);
+      setSessionSummaries(loadReviewSessionSummaries());
       setComparisonLensIds(loadComparisonLensPreference());
       setStorageMessages(consumeStorageWarnings().map((warning) => warning.message));
       setHydrated(true);
@@ -322,6 +330,25 @@ export function LineForgeApp() {
     setAttemptResult(null);
   }
 
+  function handleSessionCardReview(cardId: string, result: ReviewResult) {
+    setCards((currentCards) =>
+      currentCards.map((card) => {
+        if (card.id !== cardId) {
+          return card;
+        }
+
+        return appendDrillAttempt(
+          card,
+          createDrillAttempt(card, result, "manual-reveal"),
+        );
+      }),
+    );
+  }
+
+  function handleCompleteSession(summary: ReviewSessionSummary) {
+    setSessionSummaries(saveReviewSessionSummary(summary));
+  }
+
   function handleAttemptMove(
     card: MistakeCard,
     sourceSquare: string,
@@ -500,7 +527,13 @@ export function LineForgeApp() {
           </div>
         </div>
 
-        <MistakeDashboard stats={stats} />
+        <MistakeDashboard stats={stats} sessionSummaries={sessionSummaries} />
+        <ReviewSessionPanel
+          cards={cards}
+          comparisonLensIds={comparisonLensIds}
+          onRecordCardReview={handleSessionCardReview}
+          onCompleteSession={handleCompleteSession}
+        />
         <DrillQueuePanel
           cards={cards}
           activeGameId={game.id}

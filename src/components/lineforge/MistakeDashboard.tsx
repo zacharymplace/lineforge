@@ -1,12 +1,19 @@
 "use client";
 
 import { MOVE_VERDICTS, type MistakeStats } from "@/lib/move-ledger/types";
+import {
+  getSessionDashboardStats,
+  type ReviewSessionSummary,
+} from "@/lib/drill-queue/session";
 
 type MistakeDashboardProps = {
   stats: MistakeStats;
+  sessionSummaries: ReviewSessionSummary[];
 };
 
-export function MistakeDashboard({ stats }: MistakeDashboardProps) {
+export function MistakeDashboard({ stats, sessionSummaries }: MistakeDashboardProps) {
+  const sessionStats = getSessionDashboardStats(sessionSummaries);
+
   return (
     <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
       <div>
@@ -65,6 +72,37 @@ export function MistakeDashboard({ stats }: MistakeDashboardProps) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-3 rounded-md bg-black/30 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-medium text-stone-100">Recent review sessions</div>
+            <div className="text-xs text-stone-500">
+              {sessionStats.totalSessionsCompleted} completed · latest success{" "}
+              {sessionStats.latestSuccessRate}%
+            </div>
+          </div>
+        </div>
+        {sessionStats.recentSessions.length === 0 ? (
+          <div className="text-sm text-stone-500">No completed sessions yet.</div>
+        ) : (
+          <div className="grid gap-2">
+            {sessionStats.recentSessions.map((summary) => (
+              <div
+                key={summary.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-stone-950 px-3 py-2 text-sm"
+              >
+                <span className="text-stone-200">
+                  {summary.remembered}/{summary.totalReviewed} remembered
+                </span>
+                <span className="text-xs text-stone-500">
+                  {new Date(summary.completedAt).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

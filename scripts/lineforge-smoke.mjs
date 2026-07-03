@@ -635,6 +635,152 @@ function appendAttempt(card, attempt) {
   };
 }
 
+const sessionSummariesKey = "lineforge.drillQueue.sessionSummaries.v1";
+
+function filterSessionCards(cards, filter) {
+  if (filter.type === "verdict") {
+    return cards.filter((card) => card.verdict === filter.verdict);
+  }
+
+  if (filter.type === "tag") {
+    return cards.filter((card) => card.tags.includes(filter.tag));
+  }
+
+  if (filter.type === "missed-recently") {
+    return [...cards]
+      .filter((card) => card.attemptHistory.at(-1)?.result === "missed")
+      .sort((a, b) => Date.parse(b.lastReviewedAt ?? "") - Date.parse(a.lastReviewedAt ?? ""));
+  }
+
+  if (filter.type === "lowest-success-rate") {
+    return [...cards].sort((a, b) => {
+      const aRate = a.attempts > 0 ? a.correct / a.attempts : 0;
+      const bRate = b.attempts > 0 ? b.correct / b.attempts : 0;
+      return aRate - bRate || b.attempts - a.attempts;
+    });
+  }
+
+  if (filter.type === "most-recent") {
+    return [...cards].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  return cards;
+}
+
+function buildReviewSession(cards, filter, limit = 10) {
+  const selectedCards = filterSessionCards(cards, filter).slice(0, limit);
+  if (!selectedCards.length) return null;
+
+  return {
+    id: "session-smoke",
+    startedAt: new Date().toISOString(),
+    filter,
+    selectedCardIds: selectedCards.map((card) => card.id),
+    cards: selectedCards.map((card, index) => ({ cardId: card.id, position: index })),
+    currentCardIndex: 0,
+    results: {},
+    rememberedCount: 0,
+    missedCount: 0,
+    skippedCount: 0,
+  };
+}
+
+function recordReviewSessionResult(session, cardId, result) {
+  const results = {
+    ...session.results,
+    [cardId]: {
+      cardId,
+      result,
+      recordedAt: new Date().toISOString(),
+    },
+  };
+  const currentIndex = session.cards.findIndex((card) => card.cardId === cardId);
+
+  return {
+    ...session,
+    results,
+    currentCardIndex: Math.min(session.cards.length, Math.max(session.currentCardIndex, currentIndex + 1)),
+    rememberedCount: Object.values(results).filter((item) => item.result === "remembered").length,
+    missedCount: Object.values(results).filter((item) => item.result === "missed").length,
+    skippedCount: Object.values(results).filter((item) => item.result === "skipped").length,
+  };
+}
+
+function completeReviewSession(session, cards) {
+  const sessionCards = session.selectedCardIds
+    .map((cardId) => cards.find((card) => card.id === cardId))
+    .filter(Boolean);
+  const results = Object.values(session.results);
+  const remembered = results.filter((result) => result.result === "remembered").length;
+  const missed = results.filter((result) => result.result === "missed").length;
+  const skipped = results.filter((result) => result.result === "skipped").length;
+  const topMissedTags = getTopMissedTags(session, sessionCards);
+
+  return {
+    id: session.id,
+    startedAt: session.startedAt,
+    completedAt: new Date().toISOString(),
+    filter: session.filter,
+    selectedCardIds: session.selectedCardIds,
+    totalReviewed: remembered + missed + skipped,
+    remembered,
+    missed,
+    skipped,
+    successRate: remembered + missed > 0 ? Math.round((remembered / (remembered + missed)) * 100) : 0,
+    topMissedTags,
+    verdictBreakdown: getVerdictBreakdown(sessionCards),
+    recommendedNextAction: getSessionRecommendation(session, sessionCards),
+  };
+}
+
+function getTopMissedTags(session, cards) {
+  const counts = new Map();
+  for (const result of Object.values(session.results)) {
+    if (result.result !== "missed") continue;
+    const missedCard = cards.find((card) => card.id === result.cardId);
+    for (const tag of missedCard?.tags ?? []) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function getVerdictBreakdown(cards) {
+  const counts = new Map();
+  for (const currentCard of cards) {
+    counts.set(currentCard.verdict, (counts.get(currentCard.verdict) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([verdict, count]) => ({ verdict, count }));
+}
+
+function getSessionRecommendation(session, cards) {
+  const topTag = getTopMissedTags(session, cards)[0]?.tag;
+  const attempted = session.rememberedCount + session.missedCount;
+  const missRate = attempted > 0 ? session.missedCount / attempted : 0;
+  if (topTag === "missed tactic") return "Repeat missed tactic cards.";
+  if (topTag === "king safety") return "Review king safety cards before your next game.";
+  if (missRate >= 0.5) return "Reduce session size if miss rate stays high.";
+  return "Keep this card mix in rotation.";
+}
+
+function saveReviewSessionSummary(summary, storage) {
+  const summaries = loadReviewSessionSummaries(storage);
+  const nextSummaries = [summary, ...summaries.filter((item) => item.id !== summary.id)].slice(0, 20);
+  storage?.setItem(sessionSummariesKey, JSON.stringify(nextSummaries));
+  return nextSummaries;
+}
+
+function loadReviewSessionSummaries(storage) {
+  try {
+    const parsed = JSON.parse(storage?.getItem(sessionSummariesKey) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function createEmptyLibrary(activeGameId = null) {
   return { savedGames: [], activeGameId };
 }
@@ -1462,6 +1608,64 @@ assert.equal(
   getReviewPacketFilename(cardPacket, "markdown"),
   "lineforge-card-2026-07-03-packet-card-smoke.md",
 );
+
+const sessionCardSet = [
+  manualReviewed,
+  {
+    ...manualReviewed,
+    id: "session-card-blunder",
+    verdict: "blunder",
+    tags: ["king safety"],
+    attempts: 4,
+    correct: 1,
+    createdAt: "2026-07-03T10:00:00.000Z",
+    lastReviewedAt: "2026-07-03T11:00:00.000Z",
+    attemptHistory: [
+      createAttempt(manualReviewed, "missed", "manual-reveal"),
+    ],
+  },
+  {
+    ...manualReviewed,
+    id: "session-card-good",
+    verdict: "good",
+    tags: ["bad trade"],
+    attempts: 2,
+    correct: 2,
+    createdAt: "2026-07-03T12:00:00.000Z",
+    lastReviewedAt: "2026-07-03T12:30:00.000Z",
+    attemptHistory: [
+      createAttempt(manualReviewed, "remembered", "manual-reveal"),
+    ],
+  },
+];
+const allSession = buildReviewSession(sessionCardSet, { type: "all" });
+assert.equal(allSession.selectedCardIds.length, 3);
+assert.deepEqual(
+  filterSessionCards(sessionCardSet, { type: "verdict", verdict: "blunder" }).map((currentCard) => currentCard.id),
+  ["session-card-blunder"],
+);
+assert.deepEqual(
+  filterSessionCards(sessionCardSet, { type: "tag", tag: "bad trade" }).map((currentCard) => currentCard.id),
+  ["session-card-good"],
+);
+assert.equal(
+  filterSessionCards(sessionCardSet, { type: "lowest-success-rate" })[0].id,
+  "session-card-blunder",
+);
+let recordedSession = recordReviewSessionResult(allSession, manualReviewed.id, "remembered");
+recordedSession = recordReviewSessionResult(recordedSession, "session-card-blunder", "missed");
+recordedSession = recordReviewSessionResult(recordedSession, "session-card-good", "skipped");
+assert.equal(recordedSession.rememberedCount, 1);
+assert.equal(recordedSession.missedCount, 1);
+assert.equal(recordedSession.skippedCount, 1);
+const sessionSummary = completeReviewSession(recordedSession, sessionCardSet);
+assert.equal(sessionSummary.totalReviewed, 3);
+assert.equal(sessionSummary.successRate, 50);
+assert.equal(sessionSummary.topMissedTags[0].tag, "king safety");
+assert.equal(sessionSummary.recommendedNextAction, "Review king safety cards before your next game.");
+const sessionStorage = createMemoryStorage();
+saveReviewSessionSummary(sessionSummary, sessionStorage);
+assert.equal(loadReviewSessionSummaries(sessionStorage)[0].id, sessionSummary.id);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",
