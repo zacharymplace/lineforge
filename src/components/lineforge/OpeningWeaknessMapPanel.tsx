@@ -3,28 +3,65 @@
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
+  buildFilteredOpeningWeaknessMap,
   buildOpeningWeaknessReviewCardIds,
+  buildOpeningWeaknessReviewCardIdsFromSignals,
+  summarizeOpeningWeaknessFilter,
+  type OpeningWeaknessFilter,
   type OpeningWeaknessBucket,
   type OpeningWeaknessMap,
 } from "@/lib/mistake-graph/opening-weakness-map";
+import {
+  MISTAKE_TAGS,
+  MOVE_VERDICTS,
+  type MistakeTag,
+  type MoveVerdict,
+} from "@/lib/move-ledger/types";
 
 type OpeningWeaknessMapPanelProps = {
   openingMap: OpeningWeaknessMap;
+  activeGameId?: string | null;
   onStartBucketReview: (bucket: OpeningWeaknessBucket) => void;
+  onStartCardIdsReview: (cardIds: string[]) => void;
 };
 
 export function OpeningWeaknessMapPanel({
   openingMap,
+  activeGameId,
   onStartBucketReview,
+  onStartCardIdsReview,
 }: OpeningWeaknessMapPanelProps) {
   const [selectedBucketId, setSelectedBucketId] = useState<string | null>(null);
+  const [reviewState, setReviewState] =
+    useState<OpeningWeaknessFilter["reviewState"]>("all");
+  const [currentGameOnly, setCurrentGameOnly] = useState(false);
+  const [verdict, setVerdict] = useState<MoveVerdict | "all">("all");
+  const [tag, setTag] = useState<MistakeTag | "all">("all");
+  const filter: OpeningWeaknessFilter = useMemo(
+    () => ({
+      reviewState,
+      activeGameId,
+      currentGameOnly,
+      verdict,
+      tag,
+    }),
+    [reviewState, activeGameId, currentGameOnly, verdict, tag],
+  );
+  const filteredMap = useMemo(
+    () => buildFilteredOpeningWeaknessMap(openingMap, filter),
+    [openingMap, filter],
+  );
+  const filterSummary = useMemo(
+    () => summarizeOpeningWeaknessFilter(openingMap, filteredMap, filter),
+    [openingMap, filteredMap, filter],
+  );
   const selectedBucket = useMemo(
     () =>
-      openingMap.buckets.find((bucket) => bucket.id === selectedBucketId) ??
-      openingMap.summary.strongestBucket ??
-      openingMap.buckets[0] ??
+      filteredMap.buckets.find((bucket) => bucket.id === selectedBucketId) ??
+      filteredMap.summary.strongestBucket ??
+      filteredMap.buckets[0] ??
       null,
-    [openingMap, selectedBucketId],
+    [filteredMap, selectedBucketId],
   );
 
   return (
@@ -37,26 +74,101 @@ export function OpeningWeaknessMapPanel({
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Metric label="Opening cards" value={openingMap.summary.totalOpeningCards} />
+        <Metric label="Opening cards" value={filteredMap.summary.totalOpeningCards} />
         <Metric
           label="Top weakness"
-          value={openingMap.summary.strongestBucket?.label ?? "None"}
+          value={filteredMap.summary.strongestBucket?.label ?? "None"}
         />
         <Metric
           label="Most missed"
-          value={openingMap.summary.mostMissedBucket?.label ?? "None"}
+          value={filteredMap.summary.mostMissedBucket?.label ?? "None"}
         />
-        <Metric label="Next focus" value={openingMap.summary.recommendedNextReviewFocus} />
+        <Metric label="Next focus" value={filteredMap.summary.recommendedNextReviewFocus} />
       </div>
 
-      {openingMap.buckets.length === 0 ? (
+      <div className="grid gap-3 rounded-md bg-black/30 p-3">
+        <div className="grid gap-3 md:grid-cols-3">
+          <label className="grid gap-1 text-sm">
+            <span className="text-stone-500">Review state</span>
+            <select
+              className="lf-field"
+              value={reviewState}
+              onChange={(event) =>
+                setReviewState(event.target.value as OpeningWeaknessFilter["reviewState"])
+              }
+            >
+              <option value="all">All opening cards</option>
+              <option value="missed-only">Missed only</option>
+              <option value="remembered-only">Remembered only</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-stone-500">Verdict</span>
+            <select
+              className="lf-field"
+              value={verdict}
+              onChange={(event) => setVerdict(event.target.value as MoveVerdict | "all")}
+            >
+              <option value="all">All verdicts</option>
+              {MOVE_VERDICTS.map((currentVerdict) => (
+                <option key={currentVerdict} value={currentVerdict}>
+                  {currentVerdict}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="text-stone-500">Tag</span>
+            <select
+              className="lf-field"
+              value={tag}
+              onChange={(event) => setTag(event.target.value as MistakeTag | "all")}
+            >
+              <option value="all">All tags</option>
+              {MISTAKE_TAGS.map((currentTag) => (
+                <option key={currentTag} value={currentTag}>
+                  {currentTag}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <label className="flex items-center gap-2 text-stone-300">
+            <input
+              type="checkbox"
+              checked={currentGameOnly}
+              onChange={(event) => setCurrentGameOnly(event.target.checked)}
+            />
+            Current active saved game only
+          </label>
+          <button
+            className="lf-button-primary"
+            disabled={filteredMap.signals.length === 0}
+            onClick={() =>
+              onStartCardIdsReview(buildOpeningWeaknessReviewCardIdsFromSignals(filteredMap.signals))
+            }
+          >
+            Review visible cards
+          </button>
+        </div>
+
+        <div className="text-xs text-stone-500">
+          {filterSummary.visibleOpeningCards} visible · {filterSummary.hiddenOpeningCards} hidden ·{" "}
+          filters: {filterSummary.activeFilterLabels.join(", ")} · top visible bucket:{" "}
+          {filterSummary.topVisibleBucket?.label ?? "none"}
+        </div>
+      </div>
+
+      {filteredMap.buckets.length === 0 ? (
         <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
-          No opening-phase mistake cards yet.
+          No opening-phase mistake cards match these filters.
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
           <div className="grid content-start gap-2">
-            {openingMap.buckets.map((bucket) => (
+            {filteredMap.buckets.map((bucket) => (
               <button
                 key={bucket.id}
                 className={`rounded-md border px-3 py-2 text-left text-sm ${

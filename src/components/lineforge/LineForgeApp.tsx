@@ -548,6 +548,7 @@ export function LineForgeApp() {
           comparisonLensIds={comparisonLensIds}
           sessionSummaries={sessionSummaries}
           openingMap={openingMap}
+          activeGameId={isDraftGame ? null : game.id}
           onRecordCardReview={handleSessionCardReview}
           onCompleteSession={handleCompleteSession}
           onClearSessionHistory={handleClearSessionHistory}

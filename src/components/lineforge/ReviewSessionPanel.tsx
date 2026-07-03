@@ -43,6 +43,7 @@ type ReviewSessionPanelProps = {
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
   openingMap?: OpeningWeaknessMap;
+  activeGameId?: string | null;
   onRecordCardReview: (cardId: string, result: ReviewResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
   onClearSessionHistory?: () => void;
@@ -55,6 +56,7 @@ export function ReviewSessionPanel({
   comparisonLensIds,
   sessionSummaries = [],
   openingMap,
+  activeGameId,
   onRecordCardReview,
   onCompleteSession,
   onClearSessionHistory,
@@ -89,10 +91,14 @@ export function ReviewSessionPanel({
   }
 
   function startOpeningWeaknessBucketSession(bucket: OpeningWeaknessBucket) {
+    startOpeningWeaknessCardIdsSession(buildOpeningWeaknessReviewCardIds(bucket), bucket.id);
+  }
+
+  function startOpeningWeaknessCardIdsSession(cardIds: string[], bucketId = "filtered") {
     const nextSession = buildReviewSessionFromCardIds(
       cards,
-      buildOpeningWeaknessReviewCardIds(bucket),
-      { type: "opening-weakness", bucketId: bucket.id },
+      cardIds,
+      { type: "opening-weakness", bucketId },
     );
     setSession(nextSession);
     setLastSummary(null);
@@ -322,7 +328,9 @@ export function ReviewSessionPanel({
       {openingMap ? (
         <OpeningWeaknessMapPanel
           openingMap={openingMap}
+          activeGameId={activeGameId}
           onStartBucketReview={startOpeningWeaknessBucketSession}
+          onStartCardIdsReview={(cardIds) => startOpeningWeaknessCardIdsSession(cardIds)}
         />
       ) : null}
       <ReviewSessionHistoryPanel

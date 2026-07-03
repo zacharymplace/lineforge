@@ -59,8 +59,24 @@ export type OpeningWeaknessSummary = {
 export type OpeningWeaknessMap = {
   generatedAt: string;
   openingPhaseMaxPly: number;
+  signals: OpeningWeaknessSignal[];
   buckets: OpeningWeaknessBucket[];
   summary: OpeningWeaknessSummary;
+};
+
+export type OpeningWeaknessFilter = {
+  reviewState: "all" | "missed-only" | "remembered-only";
+  activeGameId?: string | null;
+  currentGameOnly?: boolean;
+  verdict?: MoveVerdict | "all";
+  tag?: MistakeTag | "all";
+};
+
+export type OpeningWeaknessFilterSummary = {
+  visibleOpeningCards: number;
+  hiddenOpeningCards: number;
+  activeFilterLabels: string[];
+  topVisibleBucket?: OpeningWeaknessBucket;
 };
 
 const BUCKET_LABELS: Record<OpeningWeaknessBucketId, string> = {
@@ -81,17 +97,8 @@ export function buildOpeningWeaknessMap(
   const sourceGameNames = new Map(savedGames.map((game) => [game.id, game.name]));
   const openingCards = cards.filter((card) => isOpeningPhaseCard(card, openingPhaseMaxPly));
   const signals = openingCards.map((card) => createOpeningWeaknessSignal(card, sourceGameNames));
-  const buckets = OPENING_WEAKNESS_BUCKET_IDS.map((bucketId) =>
-    buildOpeningWeaknessBucket(bucketId, signals.filter((signal) => signalMatchesBucket(signal, bucketId))),
-  );
-  const activeBuckets = buckets.filter((bucket) => bucket.count > 0);
 
-  return {
-    generatedAt: new Date().toISOString(),
-    openingPhaseMaxPly,
-    buckets: activeBuckets,
-    summary: buildOpeningWeaknessSummary(openingCards.length, activeBuckets),
-  };
+  return buildOpeningWeaknessMapFromSignals(signals, openingPhaseMaxPly);
 }
 
 export function isOpeningPhaseCard(card: Pick<MistakeCard, "ply">, maxPly = OPENING_PHASE_MAX_PLY) {
@@ -100,6 +107,87 @@ export function isOpeningPhaseCard(card: Pick<MistakeCard, "ply">, maxPly = OPEN
 
 export function buildOpeningWeaknessReviewCardIds(bucket: OpeningWeaknessBucket) {
   return [...new Set(bucket.cardIds)];
+}
+
+export function buildOpeningWeaknessReviewCardIdsFromSignals(signals: OpeningWeaknessSignal[]) {
+  return [...new Set(signals.map((signal) => signal.cardId))];
+}
+
+export function filterOpeningWeaknessSignals(
+  signals: OpeningWeaknessSignal[],
+  filter: OpeningWeaknessFilter,
+) {
+  return signals.filter((signal) => {
+    if (filter.reviewState === "missed-only" && signal.missed === 0) {
+      return false;
+    }
+
+    if (filter.reviewState === "remembered-only" && (signal.correct === 0 || signal.missed > 0)) {
+      return false;
+    }
+
+    if (filter.currentGameOnly && filter.activeGameId && signal.sourceGameId !== filter.activeGameId) {
+      return false;
+    }
+
+    if (filter.currentGameOnly && !filter.activeGameId) {
+      return false;
+    }
+
+    if (filter.verdict && filter.verdict !== "all" && signal.verdict !== filter.verdict) {
+      return false;
+    }
+
+    if (filter.tag && filter.tag !== "all" && !signal.tags.includes(filter.tag)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function buildFilteredOpeningWeaknessMap(
+  openingMap: OpeningWeaknessMap,
+  filter: OpeningWeaknessFilter,
+): OpeningWeaknessMap {
+  return buildOpeningWeaknessMapFromSignals(
+    filterOpeningWeaknessSignals(openingMap.signals, filter),
+    openingMap.openingPhaseMaxPly,
+  );
+}
+
+export function summarizeOpeningWeaknessFilter(
+  baseMap: OpeningWeaknessMap,
+  filteredMap: OpeningWeaknessMap,
+  filter: OpeningWeaknessFilter,
+): OpeningWeaknessFilterSummary {
+  return {
+    visibleOpeningCards: filteredMap.summary.totalOpeningCards,
+    hiddenOpeningCards: Math.max(
+      0,
+      baseMap.summary.totalOpeningCards - filteredMap.summary.totalOpeningCards,
+    ),
+    activeFilterLabels: getFilterLabels(filter),
+    topVisibleBucket: filteredMap.summary.strongestBucket,
+  };
+}
+
+function buildOpeningWeaknessMapFromSignals(
+  signals: OpeningWeaknessSignal[],
+  openingPhaseMaxPly: number,
+): OpeningWeaknessMap {
+  const buckets = OPENING_WEAKNESS_BUCKET_IDS.map((bucketId) =>
+    buildOpeningWeaknessBucket(bucketId, signals.filter((signal) => signalMatchesBucket(signal, bucketId))),
+  );
+  const activeBuckets = buckets.filter((bucket) => bucket.count > 0);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    openingPhaseMaxPly,
+    signals,
+    buckets: activeBuckets,
+    summary: buildOpeningWeaknessSummary(signals.length, activeBuckets),
+  };
 }
 
 function createOpeningWeaknessSignal(
@@ -221,3 +309,14 @@ function getSummaryRecommendation(
   return "Create early-game mistake cards to reveal opening patterns.";
 }
 
+function getFilterLabels(filter: OpeningWeaknessFilter) {
+  const labels: string[] = [];
+
+  if (filter.reviewState === "missed-only") labels.push("Missed only");
+  if (filter.reviewState === "remembered-only") labels.push("Remembered only");
+  if (filter.currentGameOnly) labels.push("Current saved game");
+  if (filter.verdict && filter.verdict !== "all") labels.push(`Verdict: ${filter.verdict}`);
+  if (filter.tag && filter.tag !== "all") labels.push(`Tag: ${filter.tag}`);
+
+  return labels.length ? labels : ["All opening cards"];
+}

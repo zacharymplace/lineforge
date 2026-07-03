@@ -873,6 +873,10 @@ function buildOpeningWeaknessMap(savedGames, cards, maxPly = openingPhaseMaxPly)
   const sourceGameNames = new Map(savedGames.map((game) => [game.id, game.name]));
   const openingCards = cards.filter((currentCard) => isOpeningPhaseCard(currentCard, maxPly));
   const signals = openingCards.map((currentCard) => createOpeningWeaknessSignal(currentCard, sourceGameNames));
+  return buildOpeningWeaknessMapFromSignals(signals, maxPly);
+}
+
+function buildOpeningWeaknessMapFromSignals(signals, maxPly = openingPhaseMaxPly) {
   const buckets = openingWeaknessBucketIds
     .map((bucketId) =>
       buildOpeningWeaknessBucket(
@@ -884,9 +888,52 @@ function buildOpeningWeaknessMap(savedGames, cards, maxPly = openingPhaseMaxPly)
 
   return {
     openingPhaseMaxPly: maxPly,
+    signals,
     buckets,
-    summary: buildOpeningWeaknessSummary(openingCards.length, buckets),
+    summary: buildOpeningWeaknessSummary(signals.length, buckets),
   };
+}
+
+function filterOpeningWeaknessSignals(signals, filter) {
+  return signals.filter((signal) => {
+    if (filter.reviewState === "missed-only" && signal.missed === 0) return false;
+    if (filter.reviewState === "remembered-only" && (signal.correct === 0 || signal.missed > 0)) {
+      return false;
+    }
+    if (filter.currentGameOnly && filter.activeGameId && signal.sourceGameId !== filter.activeGameId) {
+      return false;
+    }
+    if (filter.currentGameOnly && !filter.activeGameId) return false;
+    if (filter.verdict && filter.verdict !== "all" && signal.verdict !== filter.verdict) return false;
+    if (filter.tag && filter.tag !== "all" && !signal.tags.includes(filter.tag)) return false;
+    return true;
+  });
+}
+
+function buildFilteredOpeningWeaknessMap(openingMap, filter) {
+  return buildOpeningWeaknessMapFromSignals(
+    filterOpeningWeaknessSignals(openingMap.signals, filter),
+    openingMap.openingPhaseMaxPly,
+  );
+}
+
+function summarizeOpeningWeaknessFilter(baseMap, filteredMap, filter) {
+  return {
+    visibleOpeningCards: filteredMap.summary.totalOpeningCards,
+    hiddenOpeningCards: Math.max(0, baseMap.summary.totalOpeningCards - filteredMap.summary.totalOpeningCards),
+    activeFilterLabels: getOpeningWeaknessFilterLabels(filter),
+    topVisibleBucket: filteredMap.summary.strongestBucket,
+  };
+}
+
+function getOpeningWeaknessFilterLabels(filter) {
+  const labels = [];
+  if (filter.reviewState === "missed-only") labels.push("Missed only");
+  if (filter.reviewState === "remembered-only") labels.push("Remembered only");
+  if (filter.currentGameOnly) labels.push("Current saved game");
+  if (filter.verdict && filter.verdict !== "all") labels.push(`Verdict: ${filter.verdict}`);
+  if (filter.tag && filter.tag !== "all") labels.push(`Tag: ${filter.tag}`);
+  return labels.length ? labels : ["All opening cards"];
 }
 
 function createOpeningWeaknessSignal(currentCard, sourceGameNames) {
@@ -969,12 +1016,25 @@ function buildOpeningWeaknessReviewCardIds(bucket) {
   return [...new Set(bucket.cardIds)];
 }
 
+function buildOpeningWeaknessReviewCardIdsFromSignals(signals) {
+  return [...new Set(signals.map((signal) => signal.cardId))];
+}
+
 function buildOpeningWeaknessReviewSession(cards, bucket) {
   return buildReviewSession(
     buildOpeningWeaknessReviewCardIds(bucket)
       .map((cardId) => cards.find((currentCard) => currentCard.id === cardId))
       .filter(Boolean),
     { type: "opening-weakness", bucketId: bucket.id },
+    "all",
+  );
+}
+
+function buildOpeningWeaknessVisibleReviewSession(cards, signals) {
+  const cardIds = buildOpeningWeaknessReviewCardIdsFromSignals(signals);
+  return buildReviewSession(
+    cardIds.map((cardId) => cards.find((currentCard) => currentCard.id === cardId)).filter(Boolean),
+    { type: "opening-weakness", bucketId: "filtered" },
     "all",
   );
 }
@@ -2044,6 +2104,17 @@ const openingCards = [
   },
   {
     ...manualReviewed,
+    id: "other-game-opening-card",
+    sourceGameId: "other-opening-game",
+    ply: 16,
+    moveSan: "h4",
+    verdict: "mistake",
+    tags: ["plan mismatch"],
+    attempts: 1,
+    correct: 0,
+  },
+  {
+    ...manualReviewed,
     id: "late-opening-tag-card",
     sourceGameId: "opening-game",
     ply: 24,
@@ -2055,19 +2126,22 @@ const openingCards = [
   },
 ];
 const openingMap = buildOpeningWeaknessMap(
-  [{ id: "opening-game", name: "Local opening sample" }],
+  [
+    { id: "opening-game", name: "Local opening sample" },
+    { id: "other-opening-game", name: "Other opening sample" },
+  ],
   openingCards,
 );
 assert.equal(isOpeningPhaseCard({ ply: 20 }), true);
 assert.equal(isOpeningPhaseCard({ ply: 21 }), false);
-assert.equal(openingMap.summary.totalOpeningCards, 5);
+assert.equal(openingMap.summary.totalOpeningCards, 6);
 assert.deepEqual(
   openingMap.buckets.find((bucket) => bucket.id === "opening-confusion").cardIds,
   ["opening-confusion-card"],
 );
 assert.deepEqual(
   openingMap.buckets.find((bucket) => bucket.id === "plan-mismatch").cardIds,
-  ["plan-mismatch-card"],
+  ["plan-mismatch-card", "other-game-opening-card"],
 );
 assert.deepEqual(
   openingMap.buckets.find((bucket) => bucket.id === "missed-tactic").cardIds,
@@ -2081,9 +2155,68 @@ assert.deepEqual(
   openingMap.buckets.find((bucket) => bucket.id === "king-safety").cardIds,
   ["king-safety-card"],
 );
-assert.equal(openingMap.summary.strongestBucket.id, "missed-tactic");
+assert.equal(openingMap.summary.strongestBucket.id, "plan-mismatch");
 assert.equal(openingMap.summary.mostMissedBucket.id, "missed-tactic");
 assert.equal(openingMap.summary.topRecurringTags[0].count, 2);
+const missedOnlyOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "missed-only",
+});
+assert.deepEqual(
+  buildOpeningWeaknessReviewCardIdsFromSignals(missedOnlyOpeningMap.signals),
+  [
+    "opening-confusion-card",
+    "plan-mismatch-card",
+    "missed-tactic-card",
+    "king-safety-card",
+    "other-game-opening-card",
+  ],
+);
+const rememberedOnlyOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "remembered-only",
+});
+assert.deepEqual(
+  buildOpeningWeaknessReviewCardIdsFromSignals(rememberedOnlyOpeningMap.signals),
+  ["bad-trade-card"],
+);
+const currentGameOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "all",
+  currentGameOnly: true,
+  activeGameId: "opening-game",
+});
+assert.equal(currentGameOpeningMap.summary.totalOpeningCards, 5);
+assert.equal(
+  currentGameOpeningMap.signals.some((signal) => signal.cardId === "other-game-opening-card"),
+  false,
+);
+const noCurrentGameOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "all",
+  currentGameOnly: true,
+  activeGameId: null,
+});
+assert.equal(noCurrentGameOpeningMap.summary.totalOpeningCards, 0);
+const verdictOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "all",
+  verdict: "blunder",
+});
+assert.deepEqual(buildOpeningWeaknessReviewCardIdsFromSignals(verdictOpeningMap.signals), [
+  "missed-tactic-card",
+]);
+const tagOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, {
+  reviewState: "all",
+  tag: "plan mismatch",
+});
+assert.deepEqual(buildOpeningWeaknessReviewCardIdsFromSignals(tagOpeningMap.signals), [
+  "plan-mismatch-card",
+  "other-game-opening-card",
+]);
+const filteredSummary = summarizeOpeningWeaknessFilter(openingMap, tagOpeningMap, {
+  reviewState: "all",
+  tag: "plan mismatch",
+});
+assert.equal(filteredSummary.visibleOpeningCards, 2);
+assert.equal(filteredSummary.hiddenOpeningCards, 4);
+assert.deepEqual(filteredSummary.activeFilterLabels, ["Tag: plan mismatch"]);
+assert.equal(filteredSummary.topVisibleBucket.id, "plan-mismatch");
 const missedTacticBucket = openingMap.buckets.find((bucket) => bucket.id === "missed-tactic");
 const openingBucketSession = buildOpeningWeaknessReviewSession(openingCards, {
   ...missedTacticBucket,
@@ -2092,6 +2225,18 @@ const openingBucketSession = buildOpeningWeaknessReviewSession(openingCards, {
 assert.deepEqual(openingBucketSession.selectedCardIds, ["missed-tactic-card"]);
 assert.equal(openingBucketSession.filter.type, "opening-weakness");
 assert.equal(openingBucketSession.filter.bucketId, "missed-tactic");
+const filteredBucket = tagOpeningMap.buckets.find((bucket) => bucket.id === "plan-mismatch");
+const filteredBucketSession = buildOpeningWeaknessReviewSession(openingCards, filteredBucket);
+assert.deepEqual(filteredBucketSession.selectedCardIds, [
+  "plan-mismatch-card",
+  "other-game-opening-card",
+]);
+const visibleOpeningSession = buildOpeningWeaknessVisibleReviewSession(openingCards, tagOpeningMap.signals);
+assert.deepEqual(visibleOpeningSession.selectedCardIds, [
+  "plan-mismatch-card",
+  "other-game-opening-card",
+]);
+assert.equal(buildFilteredOpeningWeaknessMap(openingMap, { reviewState: "all", tag: "time pressure" }).summary.totalOpeningCards, 0);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",
