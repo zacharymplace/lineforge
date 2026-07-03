@@ -102,6 +102,13 @@ export function GameImportPanel({
               {preview.warning}
             </div>
           ) : null}
+          <div className="grid gap-1 rounded-md bg-black/25 p-3">
+            <div className="text-base font-semibold text-amber-100">{preview.previewTitle}</div>
+            <div className="text-xs text-stone-400">
+              {preview.metadata.result !== "Unknown" ? `${preview.metadata.result} · ` : ""}
+              {preview.movePreview.totalPlyCount} plies
+            </div>
+          </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <PreviewRow label="White" value={preview.metadata.white} />
             <PreviewRow label="Black" value={preview.metadata.black} />
@@ -117,6 +124,18 @@ export function GameImportPanel({
             <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
               {preview.finalFen}
             </code>
+          </div>
+          <div className="grid gap-3 rounded-md bg-black/25 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-medium text-stone-200">Move preview</span>
+              <span className="text-xs text-stone-500">
+                {preview.movePreview.totalPlyCount} total plies
+              </span>
+            </div>
+            <MoveSnippetList label="First moves" moves={preview.movePreview.first} />
+            {preview.movePreview.hasDistinctLastMoves ? (
+              <MoveSnippetList label="Last moves" moves={preview.movePreview.last} />
+            ) : null}
           </div>
           <label className="grid gap-1">
             <span className="text-stone-500">Draft name</span>
@@ -169,6 +188,34 @@ export function GameImportPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function MoveSnippetList({
+  label,
+  moves,
+}: {
+  label: string;
+  moves: PgnImportPreview["movePreview"]["first"];
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="text-xs text-stone-500">{label}</div>
+      <div className="flex flex-wrap gap-2">
+        {moves.length === 0 ? (
+          <span className="text-stone-500">No moves.</span>
+        ) : (
+          moves.map((move) => (
+            <span
+              key={`${label}-${move.ply}-${move.san}`}
+              className="rounded-md border border-stone-800 bg-stone-950 px-2 py-1 font-mono text-xs text-stone-200"
+            >
+              {move.ply}. {move.san}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 

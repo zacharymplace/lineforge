@@ -125,7 +125,9 @@ export type PgnImportMetadata = {
 export type PgnImportPreview = {
   pgn: string;
   metadata: PgnImportMetadata;
+  previewTitle: string;
   suggestedName: string;
+  movePreview: PgnMovePreview;
   moveCount: number;
   finalFen: string;
   validationStatus: "valid";
@@ -142,3 +144,15 @@ export type PgnImportResult =
       ok: false;
       error: string;
     };
+
+export type PgnMoveSnippet = {
+  ply: number;
+  san: string;
+};
+
+export type PgnMovePreview = {
+  first: PgnMoveSnippet[];
+  last: PgnMoveSnippet[];
+  totalPlyCount: number;
+  hasDistinctLastMoves: boolean;
+};

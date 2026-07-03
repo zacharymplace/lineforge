@@ -1,6 +1,11 @@
 import { Chess } from "chess.js";
 import { createGameFromChess } from "./game";
-import type { LineForgeGame, PgnImportMetadata, PgnImportResult } from "./types";
+import type {
+  LineForgeGame,
+  PgnImportMetadata,
+  PgnImportResult,
+  PgnMovePreview,
+} from "./types";
 
 const UNKNOWN = "Unknown";
 
@@ -22,14 +27,18 @@ export function parsePgnImportPreview(
     chess.loadPgn(trimmedPgn, { strict: false });
     const headers = chess.getHeaders();
     const metadata = getMetadata(headers);
+    const history = chess.history();
+    const previewTitle = suggestDraftName(metadata);
 
     return {
       ok: true,
       preview: {
         pgn: trimmedPgn,
         metadata,
-        suggestedName: suggestDraftName(metadata),
-        moveCount: chess.history().length,
+        previewTitle,
+        suggestedName: previewTitle,
+        movePreview: createMovePreview(history),
+        moveCount: history.length,
         finalFen: chess.fen(),
         validationStatus: "valid",
         hasUnsavedWarning: hasUnsavedChanges,
@@ -69,6 +78,31 @@ export function suggestDraftName(metadata: PgnImportMetadata) {
   }
 
   return "Imported Game";
+}
+
+export function createMovePreview(moves: string[]): PgnMovePreview {
+  const first = moves.slice(0, 6).map(toSnippet);
+  const hasDistinctLastMoves = moves.length > 12;
+  const last = hasDistinctLastMoves
+    ? moves.slice(-6).map((san, index) => ({
+        ply: moves.length - 6 + index + 1,
+        san,
+      }))
+    : [];
+
+  return {
+    first,
+    last,
+    totalPlyCount: moves.length,
+    hasDistinctLastMoves,
+  };
+}
+
+function toSnippet(san: string, index: number) {
+  return {
+    ply: index + 1,
+    san,
+  };
 }
 
 function getMetadata(headers: Record<string, string>) {

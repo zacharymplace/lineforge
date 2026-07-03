@@ -234,19 +234,40 @@ function parsePgnImportPreview(pgn, hasUnsavedChangesValue) {
       date: normalizeHeader(headers.Date),
       result: normalizeHeader(headers.Result),
     };
+    const history = previewChess.history();
+    const previewTitle =
+      metadata.white !== "Unknown" && metadata.black !== "Unknown"
+        ? `${metadata.white} vs ${metadata.black}`
+        : metadata.event !== "Unknown" && metadata.date !== "Unknown"
+          ? `${metadata.event} - ${metadata.date}`
+          : "Imported Game";
+    const createMovePreview = (moves) => {
+      const first = moves.slice(0, 6).map((san, index) => ({ ply: index + 1, san }));
+      const hasDistinctLastMoves = moves.length > 12;
+      const last = hasDistinctLastMoves
+        ? moves.slice(-6).map((san, index) => ({
+            ply: moves.length - 6 + index + 1,
+            san,
+          }))
+        : [];
+
+      return {
+        first,
+        last,
+        totalPlyCount: moves.length,
+        hasDistinctLastMoves,
+      };
+    };
 
     return {
       ok: true,
       preview: {
         pgn: trimmedPgn,
         metadata,
-        suggestedName:
-          metadata.white !== "Unknown" && metadata.black !== "Unknown"
-            ? `${metadata.white} vs ${metadata.black}`
-            : metadata.event !== "Unknown" && metadata.date !== "Unknown"
-              ? `${metadata.event} - ${metadata.date}`
-              : "Imported Game",
-        moveCount: previewChess.history().length,
+        previewTitle,
+        suggestedName: previewTitle,
+        movePreview: createMovePreview(history),
+        moveCount: history.length,
         finalFen: previewChess.fen(),
         validationStatus: "valid",
         hasUnsavedWarning: hasUnsavedChangesValue,
@@ -366,7 +387,15 @@ assert.equal(previewResult.preview.metadata.site, "LineForge Local");
 assert.equal(previewResult.preview.metadata.date, "2026.07.03");
 assert.equal(previewResult.preview.metadata.result, "1-0");
 assert.equal(previewResult.preview.moveCount, 6);
+assert.equal(previewResult.preview.movePreview.totalPlyCount, 6);
+assert.deepEqual(
+  previewResult.preview.movePreview.first.map((move) => move.san),
+  ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6"],
+);
+assert.equal(previewResult.preview.movePreview.hasDistinctLastMoves, false);
+assert.equal(previewResult.preview.movePreview.last.length, 0);
 assert.equal(validateFen(previewResult.preview.finalFen).ok, true);
+assert.equal(previewResult.preview.previewTitle, "Ada vs Ben");
 assert.equal(previewResult.preview.suggestedName, "Ada vs Ben");
 assert.equal(previewResult.preview.hasUnsavedWarning, true);
 assert.match(previewResult.preview.warning, /unsaved changes/i);
@@ -382,6 +411,7 @@ const missingMetadataPreview = parsePgnImportPreview("1. d4 d5 2. c4 e6", false)
 assert.equal(missingMetadataPreview.ok, true);
 assert.equal(missingMetadataPreview.preview.metadata.white, "Unknown");
 assert.equal(missingMetadataPreview.preview.metadata.black, "Unknown");
+assert.equal(missingMetadataPreview.preview.previewTitle, "Imported Game");
 assert.equal(missingMetadataPreview.preview.suggestedName, "Imported Game");
 assert.equal(missingMetadataPreview.preview.hasUnsavedWarning, false);
 
@@ -393,7 +423,26 @@ const eventOnlyPreview = parsePgnImportPreview(
   false,
 );
 assert.equal(eventOnlyPreview.ok, true);
+assert.equal(eventOnlyPreview.preview.previewTitle, "Training Set - 2026.07.03");
 assert.equal(eventOnlyPreview.preview.suggestedName, "Training Set - 2026.07.03");
+
+const longPreview = parsePgnImportPreview(
+  "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O",
+  false,
+);
+assert.equal(longPreview.ok, true);
+assert.equal(longPreview.preview.movePreview.totalPlyCount, 16);
+assert.deepEqual(
+  longPreview.preview.movePreview.first.map((move) => move.san),
+  ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6"],
+);
+assert.deepEqual(
+  longPreview.preview.movePreview.last.map((move) => move.san),
+  ["Re1", "b5", "Bb3", "d6", "c3", "O-O"],
+);
+assert.equal(longPreview.preview.movePreview.first[0].ply, 1);
+assert.equal(longPreview.preview.movePreview.last[0].ply, 11);
+assert.equal(longPreview.preview.movePreview.hasDistinctLastMoves, true);
 
 const invalidPreview = parsePgnImportPreview("this is not pgn", true);
 assert.equal(invalidPreview.ok, false);
