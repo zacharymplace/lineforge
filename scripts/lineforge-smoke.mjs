@@ -636,6 +636,7 @@ function appendAttempt(card, attempt) {
 }
 
 const sessionSummariesKey = "lineforge.drillQueue.sessionSummaries.v1";
+let sessionIdCounter = 0;
 
 function filterSessionCards(cards, filter) {
   if (filter.type === "verdict") {
@@ -667,14 +668,17 @@ function filterSessionCards(cards, filter) {
   return cards;
 }
 
-function buildReviewSession(cards, filter, limit = 10) {
-  const selectedCards = filterSessionCards(cards, filter).slice(0, limit);
+function buildReviewSession(cards, filter, size = 10) {
+  const filteredCards = filterSessionCards(cards, filter);
+  const selectedCards =
+    size === "all" ? filteredCards : filteredCards.slice(0, Math.min(size, filteredCards.length));
   if (!selectedCards.length) return null;
 
   return {
-    id: "session-smoke",
+    id: `session-smoke-${sessionIdCounter++}`,
     startedAt: new Date().toISOString(),
     filter,
+    sessionSize: size,
     selectedCardIds: selectedCards.map((card) => card.id),
     cards: selectedCards.map((card, index) => ({ cardId: card.id, position: index })),
     currentCardIndex: 0,
@@ -683,6 +687,18 @@ function buildReviewSession(cards, filter, limit = 10) {
     missedCount: 0,
     skippedCount: 0,
   };
+}
+
+function buildMissedOnlyRepeatSession(cards, summary) {
+  const missedCardIds = [...new Set(summary.missedCardIds)];
+  const missedCards = missedCardIds
+    .map((cardId) => cards.find((card) => card.id === cardId))
+    .filter(Boolean);
+  return buildReviewSession(
+    missedCards,
+    { type: "missed-only-repeat", sourceSessionId: summary.id },
+    "all",
+  );
 }
 
 function recordReviewSessionResult(session, cardId, result) {
@@ -715,14 +731,20 @@ function completeReviewSession(session, cards) {
   const missed = results.filter((result) => result.result === "missed").length;
   const skipped = results.filter((result) => result.result === "skipped").length;
   const topMissedTags = getTopMissedTags(session, sessionCards);
+  const missedCardIds = results
+    .filter((result) => result.result === "missed")
+    .map((result) => result.cardId);
 
   return {
     id: session.id,
     startedAt: session.startedAt,
     completedAt: new Date().toISOString(),
     filter: session.filter,
+    sessionSize: session.sessionSize,
     selectedCardIds: session.selectedCardIds,
+    missedCardIds,
     totalReviewed: remembered + missed + skipped,
+    sessionCardCount: session.selectedCardIds.length,
     remembered,
     missed,
     skipped,
@@ -1638,8 +1660,16 @@ const sessionCardSet = [
     ],
   },
 ];
+const largeSessionCardSet = Array.from({ length: 6 }, (_, index) => ({
+  ...manualReviewed,
+  id: `session-size-card-${index + 1}`,
+  createdAt: `2026-07-03T12:0${index}:00.000Z`,
+}));
 const allSession = buildReviewSession(sessionCardSet, { type: "all" });
 assert.equal(allSession.selectedCardIds.length, 3);
+assert.equal(buildReviewSession(largeSessionCardSet, { type: "all" }, 5).selectedCardIds.length, 5);
+assert.equal(buildReviewSession(sessionCardSet, { type: "all" }, 15).selectedCardIds.length, 3);
+assert.equal(buildReviewSession(sessionCardSet, { type: "all" }, "all").selectedCardIds.length, 3);
 assert.deepEqual(
   filterSessionCards(sessionCardSet, { type: "verdict", verdict: "blunder" }).map((currentCard) => currentCard.id),
   ["session-card-blunder"],
@@ -1659,13 +1689,27 @@ assert.equal(recordedSession.rememberedCount, 1);
 assert.equal(recordedSession.missedCount, 1);
 assert.equal(recordedSession.skippedCount, 1);
 const sessionSummary = completeReviewSession(recordedSession, sessionCardSet);
+assert.equal(sessionSummary.sessionCardCount, 3);
 assert.equal(sessionSummary.totalReviewed, 3);
 assert.equal(sessionSummary.successRate, 50);
+assert.deepEqual(sessionSummary.missedCardIds, ["session-card-blunder"]);
 assert.equal(sessionSummary.topMissedTags[0].tag, "king safety");
 assert.equal(sessionSummary.recommendedNextAction, "Review king safety cards before your next game.");
+const repeatSession = buildMissedOnlyRepeatSession(sessionCardSet, {
+  ...sessionSummary,
+  missedCardIds: ["session-card-blunder", "session-card-blunder", "missing-card"],
+});
+assert.deepEqual(repeatSession.selectedCardIds, ["session-card-blunder"]);
+assert.equal(repeatSession.filter.type, "missed-only-repeat");
+const repeatSummary = completeReviewSession(
+  recordReviewSessionResult(repeatSession, "session-card-blunder", "remembered"),
+  sessionCardSet,
+);
 const sessionStorage = createMemoryStorage();
 saveReviewSessionSummary(sessionSummary, sessionStorage);
-assert.equal(loadReviewSessionSummaries(sessionStorage)[0].id, sessionSummary.id);
+saveReviewSessionSummary(repeatSummary, sessionStorage);
+assert.equal(loadReviewSessionSummaries(sessionStorage)[0].id, repeatSummary.id);
+assert.equal(loadReviewSessionSummaries(sessionStorage)[1].id, sessionSummary.id);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",

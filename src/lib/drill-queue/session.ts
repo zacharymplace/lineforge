@@ -2,6 +2,8 @@ import type { MistakeCard, MistakeTag, MoveVerdict, ReviewResult } from "@/lib/m
 
 const SESSION_SUMMARIES_KEY = "lineforge.drillQueue.sessionSummaries.v1";
 const DEFAULT_SESSION_SIZE = 10;
+export const REVIEW_SESSION_SIZE_OPTIONS = [5, 10, 15, "all"] as const;
+export type ReviewSessionSize = (typeof REVIEW_SESSION_SIZE_OPTIONS)[number];
 
 export type ReviewSessionFilter =
   | { type: "all" }
@@ -9,7 +11,8 @@ export type ReviewSessionFilter =
   | { type: "tag"; tag: MistakeTag }
   | { type: "missed-recently" }
   | { type: "lowest-success-rate" }
-  | { type: "most-recent" };
+  | { type: "most-recent" }
+  | { type: "missed-only-repeat"; sourceSessionId: string };
 
 export type ReviewSessionCard = {
   cardId: string;
@@ -27,6 +30,7 @@ export type ReviewSession = {
   startedAt: string;
   completedAt?: string;
   filter: ReviewSessionFilter;
+  sessionSize: ReviewSessionSize;
   selectedCardIds: string[];
   cards: ReviewSessionCard[];
   currentCardIndex: number;
@@ -41,8 +45,11 @@ export type ReviewSessionSummary = {
   startedAt: string;
   completedAt: string;
   filter: ReviewSessionFilter;
+  sessionSize: ReviewSessionSize;
   selectedCardIds: string[];
+  missedCardIds: string[];
   totalReviewed: number;
+  sessionCardCount: number;
   remembered: number;
   missed: number;
   skipped: number;
@@ -57,9 +64,11 @@ type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export function buildReviewSession(
   cards: MistakeCard[],
   filter: ReviewSessionFilter,
-  limit = DEFAULT_SESSION_SIZE,
+  size: ReviewSessionSize = DEFAULT_SESSION_SIZE,
 ): ReviewSession | null {
-  const selectedCards = filterSessionCards(cards, filter).slice(0, limit);
+  const filteredCards = filterSessionCards(cards, filter);
+  const selectedCards =
+    size === "all" ? filteredCards : filteredCards.slice(0, Math.min(size, filteredCards.length));
 
   if (selectedCards.length === 0) {
     return null;
@@ -69,6 +78,7 @@ export function buildReviewSession(
     id: `session-${Date.now()}-${createId()}`,
     startedAt: new Date().toISOString(),
     filter,
+    sessionSize: size,
     selectedCardIds: selectedCards.map((card) => card.id),
     cards: selectedCards.map((card, index) => ({ cardId: card.id, position: index })),
     currentCardIndex: 0,
@@ -80,6 +90,10 @@ export function buildReviewSession(
 }
 
 export function filterSessionCards(cards: MistakeCard[], filter: ReviewSessionFilter) {
+  if (filter.type === "missed-only-repeat") {
+    return cards;
+  }
+
   if (filter.type === "verdict") {
     return cards.filter((card) => card.verdict === filter.verdict);
   }
@@ -106,6 +120,22 @@ export function filterSessionCards(cards: MistakeCard[], filter: ReviewSessionFi
   }
 
   return cards;
+}
+
+export function buildMissedOnlyRepeatSession(
+  cards: MistakeCard[],
+  summary: ReviewSessionSummary,
+): ReviewSession | null {
+  const missedCardIds = [...new Set(summary.missedCardIds)];
+  const missedCards = missedCardIds
+    .map((cardId) => cards.find((card) => card.id === cardId))
+    .filter((card): card is MistakeCard => Boolean(card));
+
+  return buildReviewSession(
+    missedCards,
+    { type: "missed-only-repeat", sourceSessionId: summary.id },
+    "all",
+  );
 }
 
 export function recordReviewSessionResult(
@@ -154,14 +184,20 @@ export function completeReviewSession(
   const missed = results.filter((result) => result.result === "missed").length;
   const skipped = results.filter((result) => result.result === "skipped").length;
   const totalReviewed = remembered + missed + skipped;
+  const missedCardIds = results
+    .filter((result) => result.result === "missed")
+    .map((result) => result.cardId);
 
   return {
     id: session.id,
     startedAt: session.startedAt,
     completedAt,
     filter: session.filter,
+    sessionSize: session.sessionSize,
     selectedCardIds: session.selectedCardIds,
+    missedCardIds,
     totalReviewed,
+    sessionCardCount: session.selectedCardIds.length,
     remembered,
     missed,
     skipped,
@@ -259,6 +295,7 @@ function isReviewSessionSummary(value: unknown): value is ReviewSessionSummary {
     typeof summary.startedAt === "string" &&
     typeof summary.completedAt === "string" &&
     Array.isArray(summary.selectedCardIds) &&
+    (Array.isArray(summary.missedCardIds) || summary.missedCardIds === undefined) &&
     typeof summary.totalReviewed === "number" &&
     typeof summary.remembered === "number" &&
     typeof summary.missed === "number" &&

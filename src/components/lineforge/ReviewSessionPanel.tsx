@@ -6,11 +6,14 @@ import { CoachLensComparison } from "./CoachLensComparison";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
 import {
+  REVIEW_SESSION_SIZE_OPTIONS,
+  buildMissedOnlyRepeatSession,
   buildReviewSession,
   completeReviewSession,
   recordReviewSessionResult,
   type ReviewSession,
   type ReviewSessionFilter,
+  type ReviewSessionSize,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
 import {
@@ -29,7 +32,7 @@ type ReviewSessionPanelProps = {
   onCompleteSession: (summary: ReviewSessionSummary) => void;
 };
 
-type FilterKind = ReviewSessionFilter["type"];
+type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat">;
 
 export function ReviewSessionPanel({
   cards,
@@ -40,6 +43,7 @@ export function ReviewSessionPanel({
   const [filterKind, setFilterKind] = useState<FilterKind>("all");
   const [filterVerdict, setFilterVerdict] = useState<MoveVerdict>("mistake");
   const [filterTag, setFilterTag] = useState<MistakeTag>("missed tactic");
+  const [sessionSize, setSessionSize] = useState<ReviewSessionSize>(10);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [lastSummary, setLastSummary] = useState<ReviewSessionSummary | null>(null);
   const filter = useMemo(
@@ -52,7 +56,13 @@ export function ReviewSessionPanel({
     : null;
 
   function startSession() {
-    const nextSession = buildReviewSession(cards, filter);
+    const nextSession = buildReviewSession(cards, filter, sessionSize);
+    setSession(nextSession);
+    setLastSummary(null);
+  }
+
+  function startMissedOnlyRepeatSession(summary: ReviewSessionSummary) {
+    const nextSession = buildMissedOnlyRepeatSession(cards, summary);
     setSession(nextSession);
     setLastSummary(null);
   }
@@ -154,6 +164,27 @@ export function ReviewSessionPanel({
                 </select>
               </label>
             ) : null}
+
+            <label className="grid gap-1 text-sm">
+              <span className="text-stone-500">Session size</span>
+              <select
+                className="lf-field"
+                value={String(sessionSize)}
+                onChange={(event) =>
+                  setSessionSize(
+                    event.target.value === "all"
+                      ? "all"
+                      : (Number(event.target.value) as ReviewSessionSize),
+                  )
+                }
+              >
+                {REVIEW_SESSION_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={String(size)}>
+                    {size === "all" ? "All available" : size}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -238,19 +269,36 @@ export function ReviewSessionPanel({
         </div>
       ) : null}
 
-      {lastSummary ? <SessionSummary summary={lastSummary} /> : null}
+      {lastSummary ? (
+        <SessionSummary
+          summary={lastSummary}
+          onReviewMissedAgain={
+            lastSummary.missedCardIds.length > 0
+              ? () => startMissedOnlyRepeatSession(lastSummary)
+              : undefined
+          }
+        />
+      ) : null}
     </section>
   );
 }
 
-function SessionSummary({ summary }: { summary: ReviewSessionSummary }) {
+function SessionSummary({
+  summary,
+  onReviewMissedAgain,
+}: {
+  summary: ReviewSessionSummary;
+  onReviewMissedAgain?: () => void;
+}) {
   return (
     <div className="grid gap-3 rounded-md border border-stone-800 bg-black/30 p-3 text-sm">
       <div className="font-medium text-stone-100">Session summary</div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <Metric label="Size" value={summary.sessionCardCount} />
         <Metric label="Reviewed" value={summary.totalReviewed} />
         <Metric label="Remembered" value={summary.remembered} />
         <Metric label="Missed" value={summary.missed} />
+        <Metric label="Missed cards" value={summary.missedCardIds.length} />
         <Metric label="Skipped" value={summary.skipped} />
         <Metric label="Success" value={`${summary.successRate}%`} />
       </div>
@@ -274,6 +322,11 @@ function SessionSummary({ summary }: { summary: ReviewSessionSummary }) {
         <span className="text-stone-500">Next action: </span>
         {summary.recommendedNextAction}
       </div>
+      {onReviewMissedAgain ? (
+        <button className="lf-button-primary w-fit" onClick={onReviewMissedAgain}>
+          Review missed cards again
+        </button>
+      ) : null}
     </div>
   );
 }
