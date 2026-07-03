@@ -212,6 +212,84 @@ function parseBackupJson(json) {
   return parsed;
 }
 
+function parsePgnImportPreview(pgn, hasUnsavedChangesValue) {
+  try {
+    const trimmedPgn = pgn.trim();
+    if (!trimmedPgn) {
+      return { ok: false, error: "Paste a PGN before previewing import." };
+    }
+
+    const previewChess = new Chess();
+    previewChess.loadPgn(trimmedPgn, { strict: false });
+    const headers = previewChess.getHeaders();
+    const normalizeHeader = (value) => {
+      const trimmed = value?.trim();
+      return trimmed && trimmed !== "?" ? trimmed : "Unknown";
+    };
+    const metadata = {
+      white: normalizeHeader(headers.White),
+      black: normalizeHeader(headers.Black),
+      event: normalizeHeader(headers.Event),
+      site: normalizeHeader(headers.Site),
+      date: normalizeHeader(headers.Date),
+      result: normalizeHeader(headers.Result),
+    };
+
+    return {
+      ok: true,
+      preview: {
+        pgn: trimmedPgn,
+        metadata,
+        suggestedName:
+          metadata.white !== "Unknown" && metadata.black !== "Unknown"
+            ? `${metadata.white} vs ${metadata.black}`
+            : metadata.event !== "Unknown" && metadata.date !== "Unknown"
+              ? `${metadata.event} - ${metadata.date}`
+              : "Imported Game",
+        moveCount: previewChess.history().length,
+        finalFen: previewChess.fen(),
+        validationStatus: "valid",
+        hasUnsavedWarning: hasUnsavedChangesValue,
+        warning: hasUnsavedChangesValue
+          ? "Current game has unsaved changes. Importing will replace the active draft."
+          : undefined,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not parse that PGN.",
+    };
+  }
+}
+
+function createGameFromImportPreview(preview, name) {
+  const importedChess = new Chess();
+  importedChess.loadPgn(preview.pgn, { strict: false });
+
+  return {
+    id: `game-import-smoke-${Date.now()}`,
+    name: name.trim() || "Imported Game",
+    pgn: importedChess.pgn(),
+    initialFen: new Chess().fen(),
+    fen: importedChess.fen(),
+    moves: importedChess.history({ verbose: true }).map((move, index) => ({
+      ply: index + 1,
+      from: move.from,
+      to: move.to,
+      san: move.san,
+      before: move.before,
+      after: move.after,
+      color: move.color,
+      piece: move.piece,
+    })),
+    annotations: {},
+    importedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 const samplePgn = "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6";
 const chess = new Chess();
 chess.loadPgn(samplePgn);
@@ -268,6 +346,58 @@ const game = {
 
 const serializedGames = JSON.parse(JSON.stringify([game]));
 assert.equal(serializedGames[0].annotations[4].verdict, "mistake");
+
+let activeGame = game;
+const pgnWithMetadata = `[Event "Friday Arena"]
+[Site "LineForge Local"]
+[Date "2026.07.03"]
+[White "Ada"]
+[Black "Ben"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0`;
+const previewResult = parsePgnImportPreview(pgnWithMetadata, true);
+assert.equal(previewResult.ok, true);
+assert.equal(activeGame.id, game.id);
+assert.equal(previewResult.preview.metadata.white, "Ada");
+assert.equal(previewResult.preview.metadata.black, "Ben");
+assert.equal(previewResult.preview.metadata.event, "Friday Arena");
+assert.equal(previewResult.preview.metadata.site, "LineForge Local");
+assert.equal(previewResult.preview.metadata.date, "2026.07.03");
+assert.equal(previewResult.preview.metadata.result, "1-0");
+assert.equal(previewResult.preview.moveCount, 6);
+assert.equal(validateFen(previewResult.preview.finalFen).ok, true);
+assert.equal(previewResult.preview.suggestedName, "Ada vs Ben");
+assert.equal(previewResult.preview.hasUnsavedWarning, true);
+assert.match(previewResult.preview.warning, /unsaved changes/i);
+const canceledActiveGame = activeGame;
+assert.equal(canceledActiveGame.id, game.id);
+activeGame = createGameFromImportPreview(previewResult.preview, "Ada prep game");
+assert.notEqual(activeGame.id, game.id);
+assert.equal(activeGame.name, "Ada prep game");
+assert.equal(activeGame.moves.length, 6);
+assert.equal(hasUnsavedChanges(createEmptyLibrary(), activeGame), true);
+
+const missingMetadataPreview = parsePgnImportPreview("1. d4 d5 2. c4 e6", false);
+assert.equal(missingMetadataPreview.ok, true);
+assert.equal(missingMetadataPreview.preview.metadata.white, "Unknown");
+assert.equal(missingMetadataPreview.preview.metadata.black, "Unknown");
+assert.equal(missingMetadataPreview.preview.suggestedName, "Imported Game");
+assert.equal(missingMetadataPreview.preview.hasUnsavedWarning, false);
+
+const eventOnlyPreview = parsePgnImportPreview(
+  `[Event "Training Set"]
+[Date "2026.07.03"]
+
+1. c4 e5`,
+  false,
+);
+assert.equal(eventOnlyPreview.ok, true);
+assert.equal(eventOnlyPreview.preview.suggestedName, "Training Set - 2026.07.03");
+
+const invalidPreview = parsePgnImportPreview("this is not pgn", true);
+assert.equal(invalidPreview.ok, false);
+assert.equal(activeGame.name, "Ada prep game");
 
 let library = createEmptyLibrary();
 assert.equal(hasUnsavedChanges(library, game), true);

@@ -112,3 +112,33 @@ export type LineForgeBackup = {
   activeGameId: string | null;
   mistakeCards: MistakeCard[];
 };
+
+export type PgnImportMetadata = {
+  white: string;
+  black: string;
+  event: string;
+  site: string;
+  date: string;
+  result: string;
+};
+
+export type PgnImportPreview = {
+  pgn: string;
+  metadata: PgnImportMetadata;
+  suggestedName: string;
+  moveCount: number;
+  finalFen: string;
+  validationStatus: "valid";
+  hasUnsavedWarning: boolean;
+  warning?: string;
+};
+
+export type PgnImportResult =
+  | {
+      ok: true;
+      preview: PgnImportPreview;
+    }
+  | {
+      ok: false;
+      error: string;
+    };

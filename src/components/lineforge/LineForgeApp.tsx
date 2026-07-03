@@ -16,13 +16,11 @@ import {
 import { createMistakeCard } from "@/lib/mistake-graph/cards";
 import { calculateMistakeStats } from "@/lib/mistake-graph/stats";
 import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledger/backup";
+import { createEmptyGame, createGameFromChess, loadGameAtPly, tryMove } from "@/lib/move-ledger/game";
 import {
-  createEmptyGame,
-  createGameFromChess,
-  importPgn,
-  loadGameAtPly,
-  tryMove,
-} from "@/lib/move-ledger/game";
+  createGameFromImportPreview,
+  parsePgnImportPreview,
+} from "@/lib/move-ledger/import-preview";
 import {
   createEmptyLibrary,
   deleteSavedGame,
@@ -47,6 +45,7 @@ import type {
   MistakeCard,
   MoveAnnotation,
   MoveLedgerLibrary,
+  PgnImportPreview,
   ReviewResult,
 } from "@/lib/move-ledger/types";
 
@@ -156,15 +155,22 @@ export function LineForgeApp() {
     setCurrentPly(0);
   }
 
-  function handleImportPgn(pgn: string) {
-    try {
-      const nextGame = importPgn(pgn);
-      setActiveGame(nextGame);
-      setCurrentPly(nextGame.moves.length);
-      return null;
-    } catch (error) {
-      return error instanceof Error ? error.message : "Could not import that PGN.";
-    }
+  function handlePreviewPgn(pgn: string) {
+    const result = parsePgnImportPreview(pgn, hasDirtyGame);
+
+    return result.ok
+      ? { preview: result.preview, error: null }
+      : { preview: null, error: result.error };
+  }
+
+  function handleConfirmImport(preview: PgnImportPreview, name: string) {
+    const nextGame = createGameFromImportPreview(preview, name);
+    setActiveGame(nextGame);
+    setCurrentPly(nextGame.moves.length);
+  }
+
+  function handleCancelImport() {
+    return;
   }
 
   function handleSaveAnnotation(annotation: MoveAnnotation) {
@@ -427,7 +433,10 @@ export function LineForgeApp() {
               game={game}
               fen={replayChess.fen()}
               pgn={replayChess.pgn()}
-              onImportPgn={handleImportPgn}
+              hasUnsavedChanges={hasDirtyGame}
+              onPreviewPgn={handlePreviewPgn}
+              onConfirmImport={handleConfirmImport}
+              onCancelImport={handleCancelImport}
               onGoToPly={goToPly}
             />
             <MoveAnnotationPanel

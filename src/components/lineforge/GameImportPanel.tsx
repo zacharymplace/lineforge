@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { LineForgeGame } from "@/lib/move-ledger/types";
+import type { LineForgeGame, PgnImportPreview } from "@/lib/move-ledger/types";
 
 type GameImportPanelProps = {
   game: LineForgeGame;
   fen: string;
   pgn: string;
-  onImportPgn: (pgn: string) => string | null;
+  hasUnsavedChanges: boolean;
+  onPreviewPgn: (pgn: string) => { preview: PgnImportPreview | null; error: string | null };
+  onConfirmImport: (preview: PgnImportPreview, name: string) => void;
+  onCancelImport: () => void;
   onGoToPly: (ply: number) => void;
 };
 
@@ -15,20 +18,51 @@ export function GameImportPanel({
   game,
   fen,
   pgn,
-  onImportPgn,
+  hasUnsavedChanges,
+  onPreviewPgn,
+  onConfirmImport,
+  onCancelImport,
   onGoToPly,
 }: GameImportPanelProps) {
   const [draftPgn, setDraftPgn] = useState("");
+  const [preview, setPreview] = useState<PgnImportPreview | null>(null);
+  const [draftName, setDraftName] = useState("Imported Game");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
-  function handleImport() {
-    const error = onImportPgn(draftPgn);
-    setMessage(error ?? "PGN imported.");
-    setIsError(Boolean(error));
-    if (!error) {
-      setDraftPgn("");
+  function handlePreview() {
+    const result = onPreviewPgn(draftPgn);
+
+    if (result.error || !result.preview) {
+      setPreview(null);
+      setMessage(result.error ?? "Could not parse that PGN.");
+      setIsError(true);
+      return;
     }
+
+    setPreview(result.preview);
+    setDraftName(result.preview.suggestedName);
+    setMessage("PGN preview ready.");
+    setIsError(false);
+  }
+
+  function handleConfirm() {
+    if (!preview) {
+      return;
+    }
+
+    onConfirmImport(preview, draftName);
+    setPreview(null);
+    setDraftPgn("");
+    setMessage("PGN imported as an unsaved draft.");
+    setIsError(false);
+  }
+
+  function handleCancel() {
+    setPreview(null);
+    setMessage("Import canceled.");
+    setIsError(false);
+    onCancelImport();
   }
 
   return (
@@ -37,6 +71,12 @@ export function GameImportPanel({
         <h2 className="text-lg font-semibold text-stone-100">MoveLedger</h2>
         <p className="text-sm text-stone-500">Import, replay, and inspect your game record.</p>
       </div>
+      {hasUnsavedChanges ? (
+        <div className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100">
+          Current game has unsaved changes. Previewing is safe; confirming an import will replace
+          the active draft.
+        </div>
+      ) : null}
 
       <textarea
         className="lf-field min-h-32 resize-y"
@@ -45,8 +85,8 @@ export function GameImportPanel({
         onChange={(event) => setDraftPgn(event.target.value)}
       />
       <div className="flex flex-wrap items-center gap-2">
-        <button className="lf-button-primary" onClick={handleImport}>
-          Import PGN
+        <button className="lf-button-primary" onClick={handlePreview}>
+          Preview PGN
         </button>
         {message ? (
           <span className={`text-sm ${isError ? "text-red-200" : "text-stone-400"}`}>
@@ -54,6 +94,48 @@ export function GameImportPanel({
           </span>
         ) : null}
       </div>
+
+      {preview ? (
+        <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3 text-sm">
+          {preview.warning ? (
+            <div className="rounded-md border border-amber-800 bg-amber-950/50 p-2 text-amber-100">
+              {preview.warning}
+            </div>
+          ) : null}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <PreviewRow label="White" value={preview.metadata.white} />
+            <PreviewRow label="Black" value={preview.metadata.black} />
+            <PreviewRow label="Event" value={preview.metadata.event} />
+            <PreviewRow label="Site" value={preview.metadata.site} />
+            <PreviewRow label="Date" value={preview.metadata.date} />
+            <PreviewRow label="Result" value={preview.metadata.result} />
+            <PreviewRow label="Move count" value={String(preview.moveCount)} />
+            <PreviewRow label="Validation" value={preview.validationStatus} />
+          </div>
+          <div>
+            <div className="mb-1 text-stone-500">Final FEN</div>
+            <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+              {preview.finalFen}
+            </code>
+          </div>
+          <label className="grid gap-1">
+            <span className="text-stone-500">Draft name</span>
+            <input
+              className="lf-field"
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button className="lf-button-primary" onClick={handleConfirm}>
+              Import game
+            </button>
+            <button className="lf-button" onClick={handleCancel}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 text-sm">
         <div>
@@ -87,5 +169,14 @@ export function GameImportPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-black/25 p-2">
+      <div className="text-xs text-stone-500">{label}</div>
+      <div className="text-stone-200">{value}</div>
+    </div>
   );
 }
