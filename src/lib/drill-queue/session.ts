@@ -12,7 +12,8 @@ export type ReviewSessionFilter =
   | { type: "missed-recently" }
   | { type: "lowest-success-rate" }
   | { type: "most-recent" }
-  | { type: "missed-only-repeat"; sourceSessionId: string };
+  | { type: "missed-only-repeat"; sourceSessionId: string }
+  | { type: "opening-weakness"; bucketId: string };
 
 export type ReviewSessionCard = {
   cardId: string;
@@ -158,6 +159,23 @@ export function buildMissedOnlyRepeatSession(
     { type: "missed-only-repeat", sourceSessionId: summary.id },
     "all",
   );
+}
+
+export function buildReviewSessionFromCardIds(
+  cards: MistakeCard[],
+  cardIds: string[],
+  filter: ReviewSessionFilter = { type: "all" },
+): ReviewSession | null {
+  const uniqueCardIds = [...new Set(cardIds)];
+  const selectedCards = uniqueCardIds
+    .map((cardId) => cards.find((card) => card.id === cardId))
+    .filter((card): card is MistakeCard => Boolean(card));
+
+  if (selectedCards.length === 0) {
+    return null;
+  }
+
+  return buildReviewSession(selectedCards, filter, "all");
 }
 
 export function recordReviewSessionResult(
@@ -323,6 +341,7 @@ export function getReviewSessionFilterLabel(filter: ReviewSessionFilter) {
   if (filter.type === "lowest-success-rate") return "Lowest success rate";
   if (filter.type === "most-recent") return "Most recent cards";
   if (filter.type === "missed-only-repeat") return "Missed-only repeat";
+  if (filter.type === "opening-weakness") return `Opening weakness: ${filter.bucketId}`;
   return "All cards";
 }
 

@@ -33,6 +33,7 @@ import {
 } from "@/lib/engine/local-engine";
 import type { EngineAnalysisResult } from "@/lib/engine/types";
 import { createMistakeCard } from "@/lib/mistake-graph/cards";
+import { buildOpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
 import { calculateMistakeStats } from "@/lib/mistake-graph/stats";
 import { emptyAnnotation } from "@/lib/move-ledger/annotations";
 import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledger/backup";
@@ -128,6 +129,10 @@ export function LineForgeApp() {
 
   const replayChess = useMemo(() => loadGameAtPly(game, currentPly), [game, currentPly]);
   const stats = useMemo(() => calculateMistakeStats(cards), [cards]);
+  const openingMap = useMemo(
+    () => buildOpeningWeaknessMap(library.savedGames, cards),
+    [cards, library.savedGames],
+  );
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
@@ -533,11 +538,16 @@ export function LineForgeApp() {
           </div>
         </div>
 
-        <MistakeDashboard stats={stats} sessionSummaries={sessionSummaries} />
+        <MistakeDashboard
+          stats={stats}
+          sessionSummaries={sessionSummaries}
+          openingMap={openingMap}
+        />
         <ReviewSessionPanel
           cards={cards}
           comparisonLensIds={comparisonLensIds}
           sessionSummaries={sessionSummaries}
+          openingMap={openingMap}
           onRecordCardReview={handleSessionCardReview}
           onCompleteSession={handleCompleteSession}
           onClearSessionHistory={handleClearSessionHistory}

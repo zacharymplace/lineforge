@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { CoachLensComparison } from "./CoachLensComparison";
+import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
 import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
@@ -14,6 +15,7 @@ import {
   REVIEW_SESSION_SIZE_OPTIONS,
   buildMissedOnlyRepeatSession,
   buildReviewSession,
+  buildReviewSessionFromCardIds,
   completeReviewSession,
   recordReviewSessionResult,
   type ReviewSession,
@@ -22,6 +24,11 @@ import {
   type ReviewSessionSize,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
+import {
+  buildOpeningWeaknessReviewCardIds,
+  type OpeningWeaknessBucket,
+  type OpeningWeaknessMap,
+} from "@/lib/mistake-graph/opening-weakness-map";
 import {
   MISTAKE_TAGS,
   MOVE_VERDICTS,
@@ -35,17 +42,19 @@ type ReviewSessionPanelProps = {
   cards: MistakeCard[];
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
+  openingMap?: OpeningWeaknessMap;
   onRecordCardReview: (cardId: string, result: ReviewResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
   onClearSessionHistory?: () => void;
 };
 
-type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat">;
+type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat" | "opening-weakness">;
 
 export function ReviewSessionPanel({
   cards,
   comparisonLensIds,
   sessionSummaries = [],
+  openingMap,
   onRecordCardReview,
   onCompleteSession,
   onClearSessionHistory,
@@ -75,6 +84,16 @@ export function ReviewSessionPanel({
 
   function startMissedOnlyRepeatSession(summary: ReviewSessionSummary) {
     const nextSession = buildMissedOnlyRepeatSession(cards, summary);
+    setSession(nextSession);
+    setLastSummary(null);
+  }
+
+  function startOpeningWeaknessBucketSession(bucket: OpeningWeaknessBucket) {
+    const nextSession = buildReviewSessionFromCardIds(
+      cards,
+      buildOpeningWeaknessReviewCardIds(bucket),
+      { type: "opening-weakness", bucketId: bucket.id },
+    );
     setSession(nextSession);
     setLastSummary(null);
   }
@@ -300,6 +319,12 @@ export function ReviewSessionPanel({
         />
       ) : null}
       </section>
+      {openingMap ? (
+        <OpeningWeaknessMapPanel
+          openingMap={openingMap}
+          onStartBucketReview={startOpeningWeaknessBucketSession}
+        />
+      ) : null}
       <ReviewSessionHistoryPanel
         summaries={sessionSummaries}
         cards={cards}

@@ -5,13 +5,15 @@ import {
   getSessionDashboardStats,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
+import type { OpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
 
 type MistakeDashboardProps = {
   stats: MistakeStats;
   sessionSummaries: ReviewSessionSummary[];
+  openingMap: OpeningWeaknessMap;
 };
 
-export function MistakeDashboard({ stats, sessionSummaries }: MistakeDashboardProps) {
+export function MistakeDashboard({ stats, sessionSummaries, openingMap }: MistakeDashboardProps) {
   const sessionStats = getSessionDashboardStats(sessionSummaries);
 
   return (
@@ -71,6 +73,20 @@ export function MistakeDashboard({ stats, sessionSummaries }: MistakeDashboardPr
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-md bg-black/30 p-3">
+        <div>
+          <div className="text-sm font-medium text-stone-100">Opening weakness map</div>
+          <div className="text-xs text-stone-500">
+            {openingMap.summary.totalOpeningCards} opening cards · top weakness{" "}
+            {openingMap.summary.strongestBucket?.label ?? "none"}
+          </div>
+        </div>
+        <div className="rounded-md bg-stone-950 px-3 py-2 text-sm text-stone-300">
+          <span className="text-stone-500">Next focus: </span>
+          {openingMap.summary.recommendedNextReviewFocus}
         </div>
       </div>
 
