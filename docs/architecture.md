@@ -22,8 +22,26 @@ MistakeGraph owns mistake cards and aggregate mistake statistics:
 - card creation from a selected ply
 - card fields such as FEN before/after, move SAN, prompt, note, tags, verdict, attempts, correct, and review history
 - dashboard stats by verdict, tag, and recency
+- deterministic opening weakness maps from early-game cards
+- opening weakness filters, reset state, and filter preferences
 
 Key files live under `src/lib/mistake-graph`.
+
+## OpeningWeaknessMap
+
+OpeningWeaknessMap is part of MistakeGraph and focuses on early-game local patterns. It treats cards with `ply <= 20` as opening-phase cards and groups them into deterministic buckets:
+
+- opening confusion
+- plan mismatch
+- missed tactic
+- bad trade
+- king safety
+- blunder
+- unclear
+
+It uses only saved structured data: cards, plies, move SAN, verdicts, tags, review stats, recent attempts, source game ids/names, and optional engine fields. It does not infer named openings.
+
+The filter layer supports missed only, remembered only, current active saved game only, selected verdict, and selected tag. Filter preferences are stored in browser localStorage.
 
 ## DrillQueue
 
@@ -33,6 +51,10 @@ DrillQueue owns active review behavior:
 - evaluating a played answer
 - appending attempt history
 - keeping summary attempts/correct counts consistent
+- review sessions built from filters, bucket card ids, or missed-only repeats
+- session sizing with persisted preferred size
+- completed session summaries and session history detail
+- clearing session history without deleting cards, games, annotations, or attempts
 
 Key files live under `src/lib/drill-queue`.
 
@@ -66,7 +88,7 @@ CoachLenses owns deterministic learning perspectives:
 - Opening Minimalist
 - Plan Mismatch
 
-It also provides comparison helpers for up to three selected lenses.
+It also provides comparison helpers for up to three selected lenses and persists the preferred comparison locally.
 
 Key files live under `src/lib/coach-lenses`.
 
@@ -82,3 +104,14 @@ ReviewPackets owns local export artifacts:
 - browser download helper
 
 Key files live under `src/lib/review-packets`.
+
+## Preferences And LocalStorage Helpers
+
+LineForge keeps core data and lightweight preferences browser-local. Current preferences include:
+
+- engine depth
+- coach lens comparison selection
+- review-session size
+- opening weakness map filters
+
+These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid.

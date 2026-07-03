@@ -2,7 +2,7 @@
 
 LineForge is a local-first chess memory system for turning games into reviewable decisions.
 
-The product is built around a simple belief: playing sites are excellent at hosting games, but improvement compounds when a player remembers their own recurring decisions. LineForge focuses on the post-game loop: import, inspect, annotate, drill, compare, and export.
+The product is built around a simple belief: playing sites are excellent at hosting games, but improvement compounds when a player remembers their own recurring decisions. LineForge focuses on the post-game loop: import, inspect, annotate, drill, compare, map recurring weaknesses, and export.
 
 ## Thesis
 
@@ -20,9 +20,60 @@ LineForge turns raw games into:
 - annotated decision records
 - mistake cards from real positions
 - active drill attempts
+- review sessions with missed-only repeats
+- inspectable review-session history
 - deterministic review summaries
 - deterministic coach lens comparisons
+- deterministic opening weakness maps
 - portable review packets
+
+## Current Product Loop
+
+1. Import a PGN.
+2. Preview metadata, first/last moves, and scrub the game on a preview board.
+3. Save the game to the local library.
+4. Annotate moves with thoughts, verdicts, and tags.
+5. Create mistake cards from selected positions.
+6. Attach optional local Stockfish analysis to selected moves or cards.
+7. Generate deterministic summaries from saved structured data.
+8. Compare deterministic coach lenses.
+9. Drill individual cards by playing the move.
+10. Run filtered review sessions with a persisted size preference.
+11. Repeat missed cards and inspect session history.
+12. Map opening weaknesses from early-game cards.
+13. Filter opening weakness buckets and review visible cards.
+14. Export review packets and backup local data.
+
+## Review Sessions
+
+Review sessions let users drill multiple cards in a focused pass. A session can be built from all cards, verdict/tag filters, missed-recently cards, lowest success rate, most recent cards, missed-only repeats, or opening weakness buckets.
+
+The session size selector supports `5`, `10`, `15`, and `all`, and the preferred size persists in browser localStorage. Completed sessions store summaries with reviewed, remembered, missed, skipped, success rate, top missed tags, recommended next action, and compact per-card result details. Session history can be inspected or cleared without deleting games, cards, annotations, or review attempts.
+
+## Opening Weakness Map
+
+The opening weakness map is deterministic and local. It uses early-game mistake cards where `ply <= 20` and groups them into these buckets:
+
+- opening confusion
+- plan mismatch
+- missed tactic
+- bad trade
+- king safety
+- blunder
+- unclear
+
+The map can be filtered by missed only, remembered only, current active saved game only, verdict, and tag. Filters can be reset to defaults, persist locally, and can start review sessions from a selected bucket or all visible filtered cards.
+
+LineForge does not infer named openings. The map reflects saved tags, verdicts, review stats, moves, and optional engine fields only.
+
+## Local Preferences
+
+LineForge stores lightweight browser-local preferences for:
+
+- engine depth
+- coach lens comparison selection
+- review-session size
+- opening weakness map filters
 
 ## Product Boundaries
 

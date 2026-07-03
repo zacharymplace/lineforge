@@ -4,7 +4,7 @@ A local-first chess memory system for turning games into reviewable decisions.
 
 **Product thesis:** Lichess is where you play. LineForge is where your chess memory compounds.
 
-LineForge is a private post-game study app. It helps you import games, inspect the moves before replacing your board, annotate what you thought, create mistake cards from your own positions, review those cards by playing the move, and export compact learning artifacts.
+LineForge is a private post-game study app. It helps you import games, inspect the moves before replacing your board, annotate what you thought, create mistake cards from your own positions, review those cards by playing the move, map recurring opening weaknesses, and export compact learning artifacts.
 
 ## Core Loop
 
@@ -17,7 +17,11 @@ LineForge is a private post-game study app. It helps you import games, inspect t
 7. Attach optional local Stockfish analysis to selected positions.
 8. Generate deterministic review summaries.
 9. Compare deterministic coach lenses.
-10. Export review packets as Markdown or JSON.
+10. Drill individual cards or run filtered review sessions.
+11. Repeat missed cards and inspect session history.
+12. Map and filter opening weaknesses.
+13. Export review packets as Markdown or JSON.
+14. Back up local data as JSON.
 
 ## Features
 
@@ -50,6 +54,10 @@ Select a card, see the position before the move, and try to play the answer on t
 
 Each drill attempt records when it happened, the attempted move/FEN when available, expected move, result, and whether it was played or manually revealed. Summary stats stay derived from that history.
 
+### Review Sessions
+
+Run focused sessions from filtered mistake-card queues. Sessions support filters, a persisted size selector, remembered/missed/skipped results, missed-only repeat sessions, completed summaries, and a history detail view with per-card results.
+
 ### Optional Local Stockfish Analysis
 
 Engine analysis is user-triggered, one position at a time, and runs locally in the browser through Stockfish. It can be attached to a move annotation or mistake card, but it is not required for the core study loop.
@@ -71,7 +79,15 @@ Coach lenses reframe the same move or card through deterministic perspectives:
 
 ### Lens Comparison
 
-Compare up to three coach lenses side by side for the same position. The default comparison is Blunder Audit, Tactics, and Plan Mismatch.
+Compare up to three coach lenses side by side for the same position. The default comparison is Blunder Audit, Tactics, and Plan Mismatch, and the preferred comparison persists locally.
+
+### Opening Weakness Map
+
+LineForge builds a deterministic opening weakness map from local early-game cards where `ply <= 20`. Buckets include opening confusion, plan mismatch, missed tactic, bad trade, king safety, blunder, and unclear.
+
+The map can be filtered by missed only, remembered only, current active saved game only, selected verdict, and selected tag. Filters can be reset, preferences persist locally, and review sessions can start from a selected bucket or all visible filtered cards.
+
+LineForge does not infer named openings; the map reflects only saved local cards, tags, verdicts, review stats, and optional engine fields.
 
 ### Review Packet Export
 
@@ -104,12 +120,13 @@ LineForge is:
 LineForge uses small internal domains:
 
 - **MoveLedger**: game state, PGN import, saved game library, annotations, localStorage, and backup data.
-- **MistakeGraph**: mistake cards and aggregate mistake statistics.
-- **DrillQueue**: active card review, move-answer evaluation, and attempt history.
+- **MistakeGraph**: mistake cards, aggregate mistake statistics, and opening weakness maps.
+- **DrillQueue**: active card review, move-answer evaluation, attempt history, review sessions, session history, and session preferences.
 - **Engine**: optional local Stockfish adapter, engine result formatting, depth preferences, and analysis attachment helpers.
 - **Explanations**: deterministic review summaries and drill recommendations.
-- **CoachLenses**: deterministic learning perspectives and lens comparison.
+- **CoachLenses**: deterministic learning perspectives, lens comparison, and comparison preferences.
 - **ReviewPackets**: compact JSON/Markdown packet construction, preview, filenames, and local download.
+- **Preferences/localStorage helpers**: browser-local preferences for engine depth, coach lens comparison, review-session size, and opening weakness filters.
 
 More detail lives in [`docs/architecture.md`](docs/architecture.md).
 
@@ -138,6 +155,7 @@ npm run build
 ## Privacy And Local-First Boundaries
 
 - Core study data is stored in browser `localStorage`.
+- Browser-local preferences store engine depth, coach lens comparison, review-session size, and opening weakness map filters.
 - Backup/export uses local JSON files.
 - Review packets download as local Markdown or JSON.
 - Engine analysis uses local browser Stockfish and is optional.
@@ -157,10 +175,10 @@ See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the Stockfish package
 
 Disciplined next steps:
 
-- Persist preferred comparison lenses.
-- Add a stronger focus trap/dialog primitive.
-- Add a review-session mode.
-- Add an opening weakness map.
+- Add a visual saved hint for opening filter preference changes.
+- Add a stronger focus trap/dialog primitive if more modals are added.
+- Add a review calendar or scheduling layer.
+- Add opening weakness trends over time.
 - Add an optional AI coach layer only after deterministic review logic remains stable.
 
 See [`docs/roadmap.md`](docs/roadmap.md) for more detail.
