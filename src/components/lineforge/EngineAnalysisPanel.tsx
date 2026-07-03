@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ENGINE_DEPTH_OPTIONS,
+  formatAnalysisTimestamp,
   formatEvaluation,
   getAttachConfirmation,
   getEngineTargetLabel,
+  getStoredAnalysisLabel,
   isStaleAnalysis,
+  loadEngineDepthPreference,
   LocalStockfishEngine,
   normalizeEngineDepth,
+  saveEngineDepthPreference,
 } from "@/lib/engine/local-engine";
 import type {
   EngineAnalysisResult,
@@ -40,7 +44,7 @@ export function EngineAnalysisPanel({
   const [target, setTarget] = useState<AnalysisTarget>(
     canAttachToAnnotation ? "annotation" : "active",
   );
-  const [depth, setDepth] = useState(10);
+  const [depth, setDepth] = useState(() => loadEngineDepthPreference());
   const [result, setResult] = useState<EngineAnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -71,6 +75,7 @@ export function EngineAnalysisPanel({
     return currentAnnotationAnalysis;
   }, [currentAnnotationAnalysis, selectedCard, target]);
   const visibleResult = result ?? storedAnalysis ?? null;
+  const visibleResultKind = result ? "current" : target === "drill" ? "card" : "move";
   const isResultStale = isStaleAnalysis(visibleResult, targetFen);
 
   function selectTarget(nextTarget: AnalysisTarget) {
@@ -182,7 +187,10 @@ export function EngineAnalysisPanel({
         <select
           className="lf-field"
           value={depth}
-          onChange={(event) => setDepth(normalizeEngineDepth(Number(event.target.value)))}
+          onChange={(event) => {
+            const nextDepth = normalizeEngineDepth(Number(event.target.value));
+            setDepth(saveEngineDepthPreference(nextDepth));
+          }}
         >
           {ENGINE_DEPTH_OPTIONS.map((depthOption) => (
             <option key={depthOption} value={depthOption}>
@@ -229,6 +237,9 @@ export function EngineAnalysisPanel({
 
       {visibleResult ? (
         <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
+          <div className="rounded-md bg-black/30 p-2 text-xs text-stone-400">
+            {getStoredAnalysisLabel(visibleResultKind)}
+          </div>
           <ResultRow
             label="Best move"
             value={`${visibleResult.bestMoveSan ?? visibleResult.bestMoveUci} (${visibleResult.bestMoveUci})`}
@@ -239,7 +250,7 @@ export function EngineAnalysisPanel({
           <ResultRow label="Engine" value={visibleResult.engineName} />
           <ResultRow
             label="Analyzed"
-            value={new Date(visibleResult.analyzedAt).toLocaleString()}
+            value={formatAnalysisTimestamp(visibleResult.analyzedAt)}
           />
         </div>
       ) : (

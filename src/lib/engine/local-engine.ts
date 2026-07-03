@@ -9,6 +9,7 @@ import type {
 
 const ENGINE_WORKER_PATH = "/stockfish/stockfish-18-lite-single.js";
 const ENGINE_NAME = "Stockfish 18 Lite Single";
+const ENGINE_DEPTH_KEY = "lineforge.engine.depth.v1";
 export const ENGINE_DEPTH_OPTIONS = [6, 8, 10, 12, 14] as const;
 export type EngineDepthOption = (typeof ENGINE_DEPTH_OPTIONS)[number];
 export type EngineTargetKind = "active" | "annotation" | "drill";
@@ -25,6 +26,42 @@ export function normalizeEngineDepth(depth: number): EngineDepthOption {
   return ENGINE_DEPTH_OPTIONS.includes(depth as EngineDepthOption)
     ? (depth as EngineDepthOption)
     : 10;
+}
+
+export function loadEngineDepthPreference(storage?: Pick<Storage, "getItem"> | null) {
+  const source = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+
+  if (!source) {
+    return 10;
+  }
+
+  return normalizeEngineDepth(Number(source.getItem(ENGINE_DEPTH_KEY)));
+}
+
+export function saveEngineDepthPreference(
+  depth: number,
+  storage?: Pick<Storage, "setItem"> | null,
+) {
+  const source = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+  const safeDepth = normalizeEngineDepth(depth);
+
+  source?.setItem(ENGINE_DEPTH_KEY, String(safeDepth));
+  return safeDepth;
+}
+
+export function formatAnalysisTimestamp(analyzedAt?: string) {
+  if (!analyzedAt) {
+    return "Unknown time";
+  }
+
+  const date = new Date(analyzedAt);
+  return Number.isNaN(date.getTime()) ? "Unknown time" : date.toLocaleString();
+}
+
+export function getStoredAnalysisLabel(kind: "current" | "move" | "card") {
+  if (kind === "current") return "Current unsaved engine result";
+  if (kind === "move") return "Saved move analysis";
+  return "Saved card analysis";
 }
 
 export function getAttachConfirmation(target: "move" | "card") {

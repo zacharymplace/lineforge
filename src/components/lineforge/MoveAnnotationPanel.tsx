@@ -3,7 +3,11 @@
 import { MISTAKE_TAGS, MOVE_VERDICTS, type LineForgeGame } from "@/lib/move-ledger/types";
 import type { MistakeCard, MoveAnnotation, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
 import { emptyAnnotation, toggleTag } from "@/lib/move-ledger/annotations";
-import { formatEvaluation } from "@/lib/engine/local-engine";
+import {
+  formatAnalysisTimestamp,
+  formatEvaluation,
+  getStoredAnalysisLabel,
+} from "@/lib/engine/local-engine";
 
 type MoveAnnotationPanelProps = {
   game: LineForgeGame;
@@ -87,10 +91,13 @@ export function MoveAnnotationPanel({
 
       {annotation.engineAnalysis ? (
         <div className="grid gap-1 rounded-md bg-black/30 p-3 text-sm">
-          <div className="text-stone-500">Saved engine analysis</div>
+          <div className="text-stone-500">{getStoredAnalysisLabel("move")}</div>
           <div className="font-mono text-amber-100">
             {annotation.engineAnalysis.bestMoveSan ?? annotation.engineAnalysis.bestMoveUci} ·{" "}
             {formatEvaluation(annotation.engineAnalysis.evaluation)}
+          </div>
+          <div className="text-xs text-stone-500">
+            Analyzed {formatAnalysisTimestamp(annotation.engineAnalysis.analyzedAt)}
           </div>
         </div>
       ) : null}

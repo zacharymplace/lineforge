@@ -2,7 +2,11 @@
 
 import { Chessboard } from "react-chessboard";
 import { getSuccessRate } from "@/lib/drill-queue/review";
-import { formatEvaluation } from "@/lib/engine/local-engine";
+import {
+  formatAnalysisTimestamp,
+  formatEvaluation,
+  getStoredAnalysisLabel,
+} from "@/lib/engine/local-engine";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 
 type DrillQueuePanelProps = {
@@ -138,12 +142,15 @@ export function DrillQueuePanel({
                   <div className="text-stone-300">{selectedCard.note || "No note saved."}</div>
                   {selectedCard.engineAnalysis ? (
                     <div>
-                      <span className="text-stone-500">Engine: </span>
-                      <span className="font-mono text-amber-100">
+                      <div className="text-stone-500">{getStoredAnalysisLabel("card")}</div>
+                      <div className="font-mono text-amber-100">
                         {selectedCard.engineAnalysis.bestMoveSan ??
                           selectedCard.engineAnalysis.bestMoveUci}{" "}
                         · {formatEvaluation(selectedCard.engineAnalysis.evaluation)}
-                      </span>
+                      </div>
+                      <div className="text-xs text-stone-500">
+                        Analyzed {formatAnalysisTimestamp(selectedCard.engineAnalysis.analyzedAt)}
+                      </div>
                     </div>
                   ) : null}
                 </div>

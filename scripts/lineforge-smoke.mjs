@@ -36,6 +36,46 @@ function normalizeEngineDepth(depth) {
   return engineDepthOptions.includes(depth) ? depth : 10;
 }
 
+const engineDepthKey = "lineforge.engine.depth.v1";
+
+function createMemoryStorage(initial = {}) {
+  const values = new Map(Object.entries(initial));
+
+  return {
+    getItem(key) {
+      return values.get(key) ?? null;
+    },
+    setItem(key, value) {
+      values.set(key, value);
+    },
+  };
+}
+
+function loadEngineDepthPreference(storage) {
+  return normalizeEngineDepth(Number(storage?.getItem(engineDepthKey)));
+}
+
+function saveEngineDepthPreference(depth, storage) {
+  const safeDepth = normalizeEngineDepth(depth);
+  storage?.setItem(engineDepthKey, String(safeDepth));
+  return safeDepth;
+}
+
+function formatAnalysisTimestamp(analyzedAt) {
+  if (!analyzedAt) {
+    return "Unknown time";
+  }
+
+  const date = new Date(analyzedAt);
+  return Number.isNaN(date.getTime()) ? "Unknown time" : date.toLocaleString();
+}
+
+function getStoredAnalysisLabel(kind) {
+  if (kind === "current") return "Current unsaved engine result";
+  if (kind === "move") return "Saved move analysis";
+  return "Saved card analysis";
+}
+
 function getAttachConfirmation(target) {
   return target === "card" ? "Saved to card" : "Saved to move";
 }
@@ -469,6 +509,21 @@ assert.equal(formatEvaluation({ type: "mate", value: 3 }), "M3");
 assert.equal(normalizeEngineDepth(6), 6);
 assert.equal(normalizeEngineDepth(14), 14);
 assert.equal(normalizeEngineDepth(7), 10);
+const validDepthStorage = createMemoryStorage({ [engineDepthKey]: "12" });
+assert.equal(loadEngineDepthPreference(validDepthStorage), 12);
+const invalidDepthStorage = createMemoryStorage({ [engineDepthKey]: "11" });
+assert.equal(loadEngineDepthPreference(invalidDepthStorage), 10);
+const missingDepthStorage = createMemoryStorage();
+assert.equal(loadEngineDepthPreference(missingDepthStorage), 10);
+assert.equal(saveEngineDepthPreference(14, missingDepthStorage), 14);
+assert.equal(missingDepthStorage.getItem(engineDepthKey), "14");
+assert.equal(saveEngineDepthPreference(99, missingDepthStorage), 10);
+assert.equal(missingDepthStorage.getItem(engineDepthKey), "10");
+assert.notEqual(formatAnalysisTimestamp(engineResult.analyzedAt), "Unknown time");
+assert.equal(formatAnalysisTimestamp("not-a-date"), "Unknown time");
+assert.equal(getStoredAnalysisLabel("current"), "Current unsaved engine result");
+assert.equal(getStoredAnalysisLabel("move"), "Saved move analysis");
+assert.equal(getStoredAnalysisLabel("card"), "Saved card analysis");
 assert.equal(getAttachConfirmation("move"), "Saved to move");
 assert.equal(getAttachConfirmation("card"), "Saved to card");
 assert.equal(isStaleAnalysis(engineResult, card.fenBefore), false);
