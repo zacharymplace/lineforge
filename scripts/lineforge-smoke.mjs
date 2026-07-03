@@ -30,6 +30,32 @@ function formatEvaluation(evaluation) {
     : `${evaluation.value > 0 ? "+" : ""}${(evaluation.value / 100).toFixed(2)}`;
 }
 
+const engineDepthOptions = [6, 8, 10, 12, 14];
+
+function normalizeEngineDepth(depth) {
+  return engineDepthOptions.includes(depth) ? depth : 10;
+}
+
+function getAttachConfirmation(target) {
+  return target === "card" ? "Saved to card" : "Saved to move";
+}
+
+function isStaleAnalysis(result, currentFen) {
+  return Boolean(result && result.fen !== currentFen);
+}
+
+function getEngineTargetLabel(target, canAttachToAnnotation, selectedCardLabel) {
+  if (target === "drill") {
+    return selectedCardLabel ? `Selected drill card: ${selectedCardLabel}` : "Selected drill card";
+  }
+
+  if (target === "annotation" && canAttachToAnnotation) {
+    return "Selected move annotation";
+  }
+
+  return "Active board position";
+}
+
 function nextEngineStatus(current, event) {
   if (event === "load") return "loading";
   if (event === "ready") return "ready";
@@ -440,6 +466,16 @@ assert.deepEqual(JSON.parse(JSON.stringify(engineResult)).evaluation, {
 assert.equal(formatEvaluation(engineResult.evaluation), "+0.32");
 assert.equal(formatEvaluation({ type: "cp", value: -48 }), "-0.48");
 assert.equal(formatEvaluation({ type: "mate", value: 3 }), "M3");
+assert.equal(normalizeEngineDepth(6), 6);
+assert.equal(normalizeEngineDepth(14), 14);
+assert.equal(normalizeEngineDepth(7), 10);
+assert.equal(getAttachConfirmation("move"), "Saved to move");
+assert.equal(getAttachConfirmation("card"), "Saved to card");
+assert.equal(isStaleAnalysis(engineResult, card.fenBefore), false);
+assert.equal(isStaleAnalysis(engineResult, card.fenAfter), true);
+assert.equal(getEngineTargetLabel("active", false), "Active board position");
+assert.equal(getEngineTargetLabel("annotation", true), "Selected move annotation");
+assert.equal(getEngineTargetLabel("drill", true, "ply 4"), "Selected drill card: ply 4");
 assert.equal(nextEngineStatus("idle", "load"), "loading");
 assert.equal(nextEngineStatus("loading", "ready"), "ready");
 assert.equal(nextEngineStatus("ready", "analyze"), "analyzing");

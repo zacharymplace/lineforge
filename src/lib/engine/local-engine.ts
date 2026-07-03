@@ -9,6 +9,9 @@ import type {
 
 const ENGINE_WORKER_PATH = "/stockfish/stockfish-18-lite-single.js";
 const ENGINE_NAME = "Stockfish 18 Lite Single";
+export const ENGINE_DEPTH_OPTIONS = [6, 8, 10, 12, 14] as const;
+export type EngineDepthOption = (typeof ENGINE_DEPTH_OPTIONS)[number];
+export type EngineTargetKind = "active" | "annotation" | "drill";
 
 type StatusListener = (status: EngineStatus) => void;
 
@@ -16,6 +19,39 @@ export function formatEvaluation(evaluation: EngineEvaluation) {
   return evaluation.type === "mate"
     ? `M${evaluation.value}`
     : `${evaluation.value > 0 ? "+" : ""}${(evaluation.value / 100).toFixed(2)}`;
+}
+
+export function normalizeEngineDepth(depth: number): EngineDepthOption {
+  return ENGINE_DEPTH_OPTIONS.includes(depth as EngineDepthOption)
+    ? (depth as EngineDepthOption)
+    : 10;
+}
+
+export function getAttachConfirmation(target: "move" | "card") {
+  return target === "card" ? "Saved to card" : "Saved to move";
+}
+
+export function isStaleAnalysis(
+  result: EngineAnalysisResult | null | undefined,
+  currentFen: string,
+) {
+  return Boolean(result && result.fen !== currentFen);
+}
+
+export function getEngineTargetLabel(
+  target: EngineTargetKind,
+  canAttachToAnnotation: boolean,
+  selectedCardLabel?: string,
+) {
+  if (target === "drill") {
+    return selectedCardLabel ? `Selected drill card: ${selectedCardLabel}` : "Selected drill card";
+  }
+
+  if (target === "annotation" && canAttachToAnnotation) {
+    return "Selected move annotation";
+  }
+
+  return "Active board position";
 }
 
 export function nextEngineStatus(

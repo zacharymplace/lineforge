@@ -2,8 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ENGINE_DEPTH_OPTIONS,
   formatEvaluation,
+  getAttachConfirmation,
+  getEngineTargetLabel,
+  isStaleAnalysis,
   LocalStockfishEngine,
+  normalizeEngineDepth,
 } from "@/lib/engine/local-engine";
 import type {
   EngineAnalysisResult,
@@ -11,7 +16,7 @@ import type {
 } from "@/lib/engine/types";
 import type { MistakeCard } from "@/lib/move-ledger/types";
 
-type AnalysisTarget = "active" | "drill";
+type AnalysisTarget = "active" | "annotation" | "drill";
 
 type EngineAnalysisPanelProps = {
   activeFen: string;
@@ -32,9 +37,13 @@ export function EngineAnalysisPanel({
 }: EngineAnalysisPanelProps) {
   const engineRef = useRef<LocalStockfishEngine | null>(null);
   const [status, setStatus] = useState<EngineStatus>("idle");
-  const [target, setTarget] = useState<AnalysisTarget>("active");
+  const [target, setTarget] = useState<AnalysisTarget>(
+    canAttachToAnnotation ? "annotation" : "active",
+  );
+  const [depth, setDepth] = useState(10);
   const [result, setResult] = useState<EngineAnalysisResult | null>(null);
   const [error, setError] = useState("");
+  const [confirmation, setConfirmation] = useState("");
 
   useEffect(() => {
     const engine = new LocalStockfishEngine();
@@ -49,6 +58,11 @@ export function EngineAnalysisPanel({
   }, []);
 
   const targetFen = target === "drill" && selectedCard ? selectedCard.fenBefore : activeFen;
+  const targetLabel = getEngineTargetLabel(
+    target,
+    canAttachToAnnotation,
+    selectedCard ? `ply ${selectedCard.ply}` : undefined,
+  );
   const storedAnalysis = useMemo(() => {
     if (target === "drill") {
       return selectedCard?.engineAnalysis;
@@ -57,13 +71,20 @@ export function EngineAnalysisPanel({
     return currentAnnotationAnalysis;
   }, [currentAnnotationAnalysis, selectedCard, target]);
   const visibleResult = result ?? storedAnalysis ?? null;
+  const isResultStale = isStaleAnalysis(visibleResult, targetFen);
+
+  function selectTarget(nextTarget: AnalysisTarget) {
+    setTarget(nextTarget);
+    setConfirmation("");
+  }
 
   function handleAnalyze() {
     setError("");
+    setConfirmation("");
     void engineRef.current
       ?.analyze({
         fen: targetFen,
-        depth: 10,
+        depth: normalizeEngineDepth(depth),
         timeoutMs: 12000,
       })
       .then(setResult)
@@ -83,6 +104,7 @@ export function EngineAnalysisPanel({
   function handleClear() {
     setResult(null);
     setError("");
+    setConfirmation("");
   }
 
   function handleAttach() {
@@ -92,11 +114,13 @@ export function EngineAnalysisPanel({
 
     if (target === "drill" && selectedCard) {
       onAttachToCard(selectedCard.id, visibleResult);
+      setConfirmation(getAttachConfirmation("card"));
       return;
     }
 
     if (canAttachToAnnotation) {
       onAttachToAnnotation(visibleResult);
+      setConfirmation(getAttachConfirmation("move"));
     }
   }
 
@@ -112,14 +136,21 @@ export function EngineAnalysisPanel({
       <div className="flex flex-wrap gap-2">
         <button
           className={target === "active" ? "lf-chip-active" : "lf-chip"}
-          onClick={() => setTarget("active")}
+          onClick={() => selectTarget("active")}
         >
           Active board
         </button>
         <button
+          className={target === "annotation" ? "lf-chip-active" : "lf-chip"}
+          disabled={!canAttachToAnnotation}
+          onClick={() => selectTarget("annotation")}
+        >
+          Move annotation
+        </button>
+        <button
           className={target === "drill" ? "lf-chip-active" : "lf-chip"}
           disabled={!selectedCard}
-          onClick={() => setTarget("drill")}
+          onClick={() => selectTarget("drill")}
         >
           Selected card
         </button>
@@ -127,16 +158,39 @@ export function EngineAnalysisPanel({
 
       <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
         <div className="flex items-center justify-between gap-3">
+          <span className="text-stone-500">Target</span>
+          <span className="text-stone-100">{targetLabel}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
           <span className="text-stone-500">Status</span>
           <span className="font-mono text-amber-100">{status}</span>
         </div>
-        <div>
-          <div className="mb-1 text-stone-500">Position</div>
-          <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-stone-500">Depth</span>
+          <span className="font-mono text-stone-100">{normalizeEngineDepth(depth)}</span>
+        </div>
+        <details>
+          <summary className="cursor-pointer text-stone-500">Target FEN</summary>
+          <code className="mt-2 block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
             {targetFen}
           </code>
-        </div>
+        </details>
       </div>
+
+      <label className="grid gap-1 text-sm">
+        <span className="text-stone-500">Analysis depth</span>
+        <select
+          className="lf-field"
+          value={depth}
+          onChange={(event) => setDepth(normalizeEngineDepth(Number(event.target.value)))}
+        >
+          {ENGINE_DEPTH_OPTIONS.map((depthOption) => (
+            <option key={depthOption} value={depthOption}>
+              Depth {depthOption}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -156,7 +210,7 @@ export function EngineAnalysisPanel({
           className="lf-button"
           disabled={
             !visibleResult ||
-            (target === "active" && !canAttachToAnnotation) ||
+            (target !== "drill" && !canAttachToAnnotation) ||
             (target === "drill" && !selectedCard)
           }
           onClick={handleAttach}
@@ -166,6 +220,12 @@ export function EngineAnalysisPanel({
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+      {confirmation ? <div className="text-sm text-emerald-200">{confirmation}</div> : null}
+      {isResultStale ? (
+        <div className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100">
+          This result belongs to a previous FEN.
+        </div>
+      ) : null}
 
       {visibleResult ? (
         <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
