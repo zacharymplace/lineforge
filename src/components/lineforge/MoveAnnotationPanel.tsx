@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  DEFAULT_COACH_LENS_COMPARISON_IDS,
   DEFAULT_COACH_LENS_ID,
   buildCoachLensComparisonOutputs,
   buildCoachLensOutput,
@@ -27,6 +26,8 @@ import { ReviewSummary } from "./ReviewSummary";
 type MoveAnnotationPanelProps = {
   game: LineForgeGame;
   currentPly: number;
+  comparisonLensIds: CoachLensId[];
+  onComparisonLensIdsChange: (lensIds: CoachLensId[]) => void;
   onSaveAnnotation: (annotation: MoveAnnotation) => void;
   onCreateCard: () => MistakeCard | null;
 };
@@ -34,6 +35,8 @@ type MoveAnnotationPanelProps = {
 export function MoveAnnotationPanel({
   game,
   currentPly,
+  comparisonLensIds,
+  onComparisonLensIdsChange,
   onSaveAnnotation,
   onCreateCard,
 }: MoveAnnotationPanelProps) {
@@ -43,9 +46,6 @@ export function MoveAnnotationPanel({
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
   const [showLensComparison, setShowLensComparison] = useState(false);
-  const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
-    DEFAULT_COACH_LENS_COMPARISON_IDS,
-  );
   const coachLensInput: CoachLensInput = {
     moveSan: move?.san,
     ply: move ? currentPly : undefined,
@@ -181,7 +181,7 @@ export function MoveAnnotationPanel({
             <CoachLensComparison
               input={coachLensInput}
               selectedLensIds={comparisonLensIds}
-              onSelectedLensIdsChange={setComparisonLensIds}
+              onSelectedLensIdsChange={onComparisonLensIdsChange}
             />
           ) : null}
         </div>

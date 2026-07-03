@@ -9,6 +9,12 @@ import { GameImportPanel } from "./GameImportPanel";
 import { GameLibraryPanel } from "./GameLibraryPanel";
 import { MistakeDashboard } from "./MistakeDashboard";
 import { MoveAnnotationPanel } from "./MoveAnnotationPanel";
+import { DEFAULT_COACH_LENS_COMPARISON_IDS } from "@/lib/coach-lenses/lenses";
+import {
+  loadComparisonLensPreference,
+  saveComparisonLensPreference,
+} from "@/lib/coach-lenses/preferences";
+import type { CoachLensId } from "@/lib/coach-lenses/types";
 import {
   appendDrillAttempt,
   createDrillAttempt,
@@ -64,6 +70,9 @@ export function LineForgeApp() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
   const [attemptResult, setAttemptResult] = useState<DrillAttemptResult | null>(null);
+  const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
+    DEFAULT_COACH_LENS_COMPARISON_IDS,
+  );
   const [storageMessages, setStorageMessages] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -84,6 +93,7 @@ export function LineForgeApp() {
       setCurrentPly(activeGame.moves.length);
       setCards(storedCards);
       setSelectedCardId(storedCards[0]?.id ?? null);
+      setComparisonLensIds(loadComparisonLensPreference());
       setStorageMessages(consumeStorageWarnings().map((warning) => warning.message));
       setHydrated(true);
     });
@@ -358,6 +368,10 @@ export function LineForgeApp() {
     );
   }
 
+  function handleComparisonLensIdsChange(lensIds: CoachLensId[]) {
+    setComparisonLensIds(saveComparisonLensPreference(lensIds));
+  }
+
   function handleExportBackup() {
     return serializeBackup(createBackup(upsertSavedGame(library, game, game.name), cards));
   }
@@ -470,6 +484,8 @@ export function LineForgeApp() {
             <MoveAnnotationPanel
               game={game}
               currentPly={currentPly}
+              comparisonLensIds={comparisonLensIds}
+              onComparisonLensIdsChange={handleComparisonLensIdsChange}
               onSaveAnnotation={handleSaveAnnotation}
               onCreateCard={handleCreateCard}
             />
@@ -490,6 +506,8 @@ export function LineForgeApp() {
           activeGameId={game.id}
           activeGameName={game.name}
           sourceGameNames={sourceGameNames}
+          comparisonLensIds={comparisonLensIds}
+          onComparisonLensIdsChange={handleComparisonLensIdsChange}
           selectedCardId={selectedCard?.id ?? null}
           revealed={selectedCard ? revealedCardId === selectedCard.id : false}
           onSelectCard={handleSelectCard}

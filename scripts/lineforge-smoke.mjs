@@ -227,6 +227,7 @@ const coachLensIds = [
 ];
 const defaultCoachLensComparisonIds = ["blunder-audit", "tactics", "plan-mismatch"];
 const maxCoachLensComparison = 3;
+const comparisonLensPreferenceKey = "lineforge.coachLenses.comparison.v1";
 
 function buildCoachLensOutput(lensId, input) {
   if (lensId === "tactics") return buildTacticsLens(input);
@@ -247,6 +248,48 @@ function normalizeCoachLensComparisonSelection(selectedLensIds, toggledLensId) {
   return nextSelection.length > maxCoachLensComparison
     ? nextSelection.slice(nextSelection.length - maxCoachLensComparison)
     : nextSelection;
+}
+
+function isValidCoachLensId(value) {
+  return typeof value === "string" && coachLensIds.includes(value);
+}
+
+function normalizeComparisonLensSelection(value) {
+  if (!Array.isArray(value)) {
+    return defaultCoachLensComparisonIds;
+  }
+
+  const normalized = [];
+
+  for (const lensId of value) {
+    if (isValidCoachLensId(lensId) && !normalized.includes(lensId)) {
+      normalized.push(lensId);
+    }
+  }
+
+  return normalized.length
+    ? normalized.slice(0, maxCoachLensComparison)
+    : defaultCoachLensComparisonIds;
+}
+
+function loadComparisonLensPreference(storage) {
+  if (!storage) {
+    return defaultCoachLensComparisonIds;
+  }
+
+  try {
+    return normalizeComparisonLensSelection(
+      JSON.parse(storage.getItem(comparisonLensPreferenceKey) ?? "null"),
+    );
+  } catch {
+    return defaultCoachLensComparisonIds;
+  }
+}
+
+function saveComparisonLensPreference(lensIds, storage) {
+  const normalized = normalizeComparisonLensSelection(lensIds);
+  storage?.setItem(comparisonLensPreferenceKey, JSON.stringify(normalized));
+  return normalized;
 }
 
 function buildCoachLensComparisonOutputs(lensIds, input) {
@@ -975,6 +1018,42 @@ assert.deepEqual(
   normalizeCoachLensComparisonSelection(["blunder-audit"], "blunder-audit"),
   ["blunder-audit"],
 );
+assert.equal(isValidCoachLensId("tactics"), true);
+assert.equal(isValidCoachLensId("not-a-lens"), false);
+assert.deepEqual(
+  normalizeComparisonLensSelection(["king-safety", "bad-id", "tactics", "king-safety"]),
+  ["king-safety", "tactics"],
+);
+assert.deepEqual(
+  normalizeComparisonLensSelection(["blunder-audit", "tactics", "trade-check", "plan-mismatch"]),
+  ["blunder-audit", "tactics", "trade-check"],
+);
+assert.deepEqual(normalizeComparisonLensSelection([]), defaultCoachLensComparisonIds);
+assert.deepEqual(normalizeComparisonLensSelection("nope"), defaultCoachLensComparisonIds);
+const validComparisonStorage = createMemoryStorage({
+  [comparisonLensPreferenceKey]: JSON.stringify(["king-safety", "trade-check"]),
+});
+assert.deepEqual(loadComparisonLensPreference(validComparisonStorage), [
+  "king-safety",
+  "trade-check",
+]);
+const invalidComparisonStorage = createMemoryStorage({
+  [comparisonLensPreferenceKey]: JSON.stringify(["not-a-lens"]),
+});
+assert.deepEqual(loadComparisonLensPreference(invalidComparisonStorage), defaultCoachLensComparisonIds);
+const malformedComparisonStorage = createMemoryStorage({
+  [comparisonLensPreferenceKey]: "{ nope",
+});
+assert.deepEqual(loadComparisonLensPreference(malformedComparisonStorage), defaultCoachLensComparisonIds);
+const savedComparisonStorage = createMemoryStorage();
+assert.deepEqual(
+  saveComparisonLensPreference(["opening-minimalist", "plan-mismatch"], savedComparisonStorage),
+  ["opening-minimalist", "plan-mismatch"],
+);
+assert.deepEqual(JSON.parse(savedComparisonStorage.getItem(comparisonLensPreferenceKey)), [
+  "opening-minimalist",
+  "plan-mismatch",
+]);
 const missingDataComparison = buildCoachLensComparisonOutputs(
   defaultCoachLensComparisonIds,
   {},

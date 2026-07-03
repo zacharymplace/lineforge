@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
 import {
-  DEFAULT_COACH_LENS_COMPARISON_IDS,
   DEFAULT_COACH_LENS_ID,
   buildCoachLensComparisonOutputs,
   buildCoachLensOutput,
@@ -29,6 +28,8 @@ type DrillQueuePanelProps = {
   activeGameId?: string;
   activeGameName?: string;
   sourceGameNames?: Record<string, string>;
+  comparisonLensIds: CoachLensId[];
+  onComparisonLensIdsChange: (lensIds: CoachLensId[]) => void;
   selectedCardId: string | null;
   revealed: boolean;
   onSelectCard: (cardId: string) => void;
@@ -47,6 +48,8 @@ export function DrillQueuePanel({
   activeGameId,
   activeGameName,
   sourceGameNames,
+  comparisonLensIds,
+  onComparisonLensIdsChange,
   selectedCardId,
   revealed,
   onSelectCard,
@@ -62,9 +65,6 @@ export function DrillQueuePanel({
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
   const [showLensComparison, setShowLensComparison] = useState(false);
-  const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
-    DEFAULT_COACH_LENS_COMPARISON_IDS,
-  );
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
@@ -188,7 +188,7 @@ export function DrillQueuePanel({
                 <CoachLensComparison
                   input={coachLensInput}
                   selectedLensIds={comparisonLensIds}
-                  onSelectedLensIdsChange={setComparisonLensIds}
+                  onSelectedLensIdsChange={onComparisonLensIdsChange}
                 />
               ) : null}
             </div>
