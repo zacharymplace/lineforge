@@ -864,6 +864,56 @@ const openingWeaknessBucketLabels = {
   blunder: "Blunder",
   unclear: "Unclear",
 };
+const openingWeaknessFilterPreferenceKey = "lineforge.mistakeGraph.openingWeaknessFilters.v1";
+const openingWeaknessReviewStates = ["all", "missed-only", "remembered-only"];
+const openingWeaknessKnownTags = [
+  "missed tactic",
+  "hung piece",
+  "bad trade",
+  "king safety",
+  "opening confusion",
+  "endgame technique",
+  "time pressure",
+  "plan mismatch",
+];
+
+function getDefaultOpeningWeaknessFilter() {
+  return {
+    reviewState: "all",
+    currentGameOnly: false,
+    verdict: "all",
+    tag: "all",
+  };
+}
+
+function normalizeOpeningWeaknessFilterPreference(value) {
+  if (!value || typeof value !== "object") {
+    return getDefaultOpeningWeaknessFilter();
+  }
+
+  return {
+    reviewState: openingWeaknessReviewStates.includes(value.reviewState) ? value.reviewState : "all",
+    currentGameOnly: typeof value.currentGameOnly === "boolean" ? value.currentGameOnly : false,
+    verdict: value.verdict === "all" || verdicts.includes(value.verdict) ? value.verdict : "all",
+    tag: value.tag === "all" || openingWeaknessKnownTags.includes(value.tag) ? value.tag : "all",
+  };
+}
+
+function loadOpeningWeaknessFilterPreference(storage) {
+  try {
+    return normalizeOpeningWeaknessFilterPreference(
+      JSON.parse(storage?.getItem(openingWeaknessFilterPreferenceKey) ?? "null"),
+    );
+  } catch {
+    return getDefaultOpeningWeaknessFilter();
+  }
+}
+
+function saveOpeningWeaknessFilterPreference(filter, storage) {
+  const normalized = normalizeOpeningWeaknessFilterPreference(filter);
+  storage?.setItem(openingWeaknessFilterPreferenceKey, JSON.stringify(normalized));
+  return normalized;
+}
 
 function isOpeningPhaseCard(card, maxPly = openingPhaseMaxPly) {
   return card.ply <= maxPly;
@@ -2217,6 +2267,65 @@ assert.equal(filteredSummary.visibleOpeningCards, 2);
 assert.equal(filteredSummary.hiddenOpeningCards, 4);
 assert.deepEqual(filteredSummary.activeFilterLabels, ["Tag: plan mismatch"]);
 assert.equal(filteredSummary.topVisibleBucket.id, "plan-mismatch");
+const resetOpeningFilter = getDefaultOpeningWeaknessFilter();
+const resetOpeningMap = buildFilteredOpeningWeaknessMap(openingMap, resetOpeningFilter);
+const resetSummary = summarizeOpeningWeaknessFilter(openingMap, resetOpeningMap, resetOpeningFilter);
+assert.deepEqual(resetOpeningFilter, {
+  reviewState: "all",
+  currentGameOnly: false,
+  verdict: "all",
+  tag: "all",
+});
+assert.equal(resetSummary.visibleOpeningCards, 6);
+assert.equal(resetSummary.hiddenOpeningCards, 0);
+assert.deepEqual(resetSummary.activeFilterLabels, ["All opening cards"]);
+const validOpeningFilterStorage = createMemoryStorage({
+  [openingWeaknessFilterPreferenceKey]: JSON.stringify({
+    reviewState: "missed-only",
+    currentGameOnly: true,
+    verdict: "blunder",
+    tag: "missed tactic",
+  }),
+});
+assert.deepEqual(loadOpeningWeaknessFilterPreference(validOpeningFilterStorage), {
+  reviewState: "missed-only",
+  currentGameOnly: true,
+  verdict: "blunder",
+  tag: "missed tactic",
+});
+const malformedOpeningFilterStorage = createMemoryStorage({
+  [openingWeaknessFilterPreferenceKey]: "{ nope",
+});
+assert.deepEqual(loadOpeningWeaknessFilterPreference(malformedOpeningFilterStorage), getDefaultOpeningWeaknessFilter());
+const invalidOpeningFilterStorage = createMemoryStorage({
+  [openingWeaknessFilterPreferenceKey]: JSON.stringify({
+    reviewState: "only-weird",
+    currentGameOnly: "yes",
+    verdict: "bad",
+    tag: "fake tag",
+  }),
+});
+assert.deepEqual(loadOpeningWeaknessFilterPreference(invalidOpeningFilterStorage), getDefaultOpeningWeaknessFilter());
+const savedOpeningFilterStorage = createMemoryStorage();
+assert.deepEqual(
+  saveOpeningWeaknessFilterPreference(
+    { reviewState: "remembered-only", currentGameOnly: true, verdict: "mistake", tag: "bad trade" },
+    savedOpeningFilterStorage,
+  ),
+  { reviewState: "remembered-only", currentGameOnly: true, verdict: "mistake", tag: "bad trade" },
+);
+assert.deepEqual(
+  JSON.parse(savedOpeningFilterStorage.getItem(openingWeaknessFilterPreferenceKey)),
+  { reviewState: "remembered-only", currentGameOnly: true, verdict: "mistake", tag: "bad trade" },
+);
+assert.deepEqual(
+  saveOpeningWeaknessFilterPreference(getDefaultOpeningWeaknessFilter(), savedOpeningFilterStorage),
+  getDefaultOpeningWeaknessFilter(),
+);
+assert.deepEqual(
+  JSON.parse(savedOpeningFilterStorage.getItem(openingWeaknessFilterPreferenceKey)),
+  getDefaultOpeningWeaknessFilter(),
+);
 const missedTacticBucket = openingMap.buckets.find((bucket) => bucket.id === "missed-tactic");
 const openingBucketSession = buildOpeningWeaknessReviewSession(openingCards, {
   ...missedTacticBucket,

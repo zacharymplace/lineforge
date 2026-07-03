@@ -12,6 +12,12 @@ import {
   type OpeningWeaknessMap,
 } from "@/lib/mistake-graph/opening-weakness-map";
 import {
+  getDefaultOpeningWeaknessFilter,
+  loadOpeningWeaknessFilterPreference,
+  saveOpeningWeaknessFilterPreference,
+  type OpeningWeaknessFilterPreference,
+} from "@/lib/mistake-graph/opening-weakness-preferences";
+import {
   MISTAKE_TAGS,
   MOVE_VERDICTS,
   type MistakeTag,
@@ -32,20 +38,15 @@ export function OpeningWeaknessMapPanel({
   onStartCardIdsReview,
 }: OpeningWeaknessMapPanelProps) {
   const [selectedBucketId, setSelectedBucketId] = useState<string | null>(null);
-  const [reviewState, setReviewState] =
-    useState<OpeningWeaknessFilter["reviewState"]>("all");
-  const [currentGameOnly, setCurrentGameOnly] = useState(false);
-  const [verdict, setVerdict] = useState<MoveVerdict | "all">("all");
-  const [tag, setTag] = useState<MistakeTag | "all">("all");
+  const [filterPreference, setFilterPreference] = useState<OpeningWeaknessFilterPreference>(() =>
+    loadOpeningWeaknessFilterPreference(),
+  );
   const filter: OpeningWeaknessFilter = useMemo(
     () => ({
-      reviewState,
+      ...filterPreference,
       activeGameId,
-      currentGameOnly,
-      verdict,
-      tag,
     }),
-    [reviewState, activeGameId, currentGameOnly, verdict, tag],
+    [filterPreference, activeGameId],
   );
   const filteredMap = useMemo(
     () => buildFilteredOpeningWeaknessMap(openingMap, filter),
@@ -63,6 +64,21 @@ export function OpeningWeaknessMapPanel({
       null,
     [filteredMap, selectedBucketId],
   );
+
+  function updateFilterPreference(nextFilter: Partial<OpeningWeaknessFilterPreference>) {
+    setFilterPreference(
+      saveOpeningWeaknessFilterPreference({
+        ...filterPreference,
+        ...nextFilter,
+      }),
+    );
+  }
+
+  function resetFilters() {
+    const defaultFilter = getDefaultOpeningWeaknessFilter();
+    setFilterPreference(saveOpeningWeaknessFilterPreference(defaultFilter));
+    setSelectedBucketId(null);
+  }
 
   return (
     <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
@@ -92,9 +108,11 @@ export function OpeningWeaknessMapPanel({
             <span className="text-stone-500">Review state</span>
             <select
               className="lf-field"
-              value={reviewState}
+              value={filterPreference.reviewState}
               onChange={(event) =>
-                setReviewState(event.target.value as OpeningWeaknessFilter["reviewState"])
+                updateFilterPreference({
+                  reviewState: event.target.value as OpeningWeaknessFilter["reviewState"],
+                })
               }
             >
               <option value="all">All opening cards</option>
@@ -106,8 +124,10 @@ export function OpeningWeaknessMapPanel({
             <span className="text-stone-500">Verdict</span>
             <select
               className="lf-field"
-              value={verdict}
-              onChange={(event) => setVerdict(event.target.value as MoveVerdict | "all")}
+              value={filterPreference.verdict}
+              onChange={(event) =>
+                updateFilterPreference({ verdict: event.target.value as MoveVerdict | "all" })
+              }
             >
               <option value="all">All verdicts</option>
               {MOVE_VERDICTS.map((currentVerdict) => (
@@ -121,8 +141,10 @@ export function OpeningWeaknessMapPanel({
             <span className="text-stone-500">Tag</span>
             <select
               className="lf-field"
-              value={tag}
-              onChange={(event) => setTag(event.target.value as MistakeTag | "all")}
+              value={filterPreference.tag}
+              onChange={(event) =>
+                updateFilterPreference({ tag: event.target.value as MistakeTag | "all" })
+              }
             >
               <option value="all">All tags</option>
               {MISTAKE_TAGS.map((currentTag) => (
@@ -138,20 +160,27 @@ export function OpeningWeaknessMapPanel({
           <label className="flex items-center gap-2 text-stone-300">
             <input
               type="checkbox"
-              checked={currentGameOnly}
-              onChange={(event) => setCurrentGameOnly(event.target.checked)}
+              checked={filterPreference.currentGameOnly}
+              onChange={(event) =>
+                updateFilterPreference({ currentGameOnly: event.target.checked })
+              }
             />
             Current active saved game only
           </label>
-          <button
-            className="lf-button-primary"
-            disabled={filteredMap.signals.length === 0}
-            onClick={() =>
-              onStartCardIdsReview(buildOpeningWeaknessReviewCardIdsFromSignals(filteredMap.signals))
-            }
-          >
-            Review visible cards
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button className="lf-button" onClick={resetFilters}>
+              Reset filters
+            </button>
+            <button
+              className="lf-button-primary"
+              disabled={filteredMap.signals.length === 0}
+              onClick={() =>
+                onStartCardIdsReview(buildOpeningWeaknessReviewCardIdsFromSignals(filteredMap.signals))
+              }
+            >
+              Review visible cards
+            </button>
+          </div>
         </div>
 
         <div className="text-xs text-stone-500">
