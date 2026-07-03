@@ -24,6 +24,42 @@ function calculateMistakeStats(cards) {
   };
 }
 
+function formatEvaluation(evaluation) {
+  return evaluation.type === "mate"
+    ? `M${evaluation.value}`
+    : `${evaluation.value > 0 ? "+" : ""}${(evaluation.value / 100).toFixed(2)}`;
+}
+
+function nextEngineStatus(current, event) {
+  if (event === "load") return "loading";
+  if (event === "ready") return "ready";
+  if (event === "analyze") return "analyzing";
+  if (event === "stop") return current === "analyzing" ? "ready" : current;
+  if (event === "error") return "error";
+  return "idle";
+}
+
+function attachAnalysisToCard(card, analysis) {
+  return {
+    ...card,
+    engineAnalysis: analysis,
+  };
+}
+
+function attachAnalysisToAnnotation(annotation, analysis) {
+  return {
+    ...annotation,
+    engineAnalysis: analysis,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function clearAnalysis(value) {
+  const { engineAnalysis, ...rest } = value;
+  void engineAnalysis;
+  return rest;
+}
+
 function applyReviewResult(card, result) {
   return {
     ...card,
@@ -376,6 +412,45 @@ const card = {
   correct: 0,
   attemptHistory: [],
 };
+
+const engineRequest = {
+  fen: card.fenBefore,
+  depth: 10,
+  timeoutMs: 12000,
+};
+assert.equal(JSON.parse(JSON.stringify(engineRequest)).fen, card.fenBefore);
+
+const engineResult = {
+  fen: card.fenBefore,
+  bestMoveUci: "b8c6",
+  bestMoveSan: "Nc6",
+  evaluation: {
+    type: "cp",
+    value: 32,
+  },
+  depth: 10,
+  nodes: 123456,
+  analyzedAt: new Date().toISOString(),
+  engineName: "Stockfish 18 Lite Single",
+};
+assert.deepEqual(JSON.parse(JSON.stringify(engineResult)).evaluation, {
+  type: "cp",
+  value: 32,
+});
+assert.equal(formatEvaluation(engineResult.evaluation), "+0.32");
+assert.equal(formatEvaluation({ type: "cp", value: -48 }), "-0.48");
+assert.equal(formatEvaluation({ type: "mate", value: 3 }), "M3");
+assert.equal(nextEngineStatus("idle", "load"), "loading");
+assert.equal(nextEngineStatus("loading", "ready"), "ready");
+assert.equal(nextEngineStatus("ready", "analyze"), "analyzing");
+assert.equal(nextEngineStatus("analyzing", "stop"), "ready");
+assert.equal(nextEngineStatus("ready", "error"), "error");
+const analyzedCard = attachAnalysisToCard(card, engineResult);
+assert.equal(analyzedCard.engineAnalysis.bestMoveSan, "Nc6");
+assert.equal(clearAnalysis(analyzedCard).engineAnalysis, undefined);
+const analyzedAnnotation = attachAnalysisToAnnotation(annotation, engineResult);
+assert.equal(analyzedAnnotation.engineAnalysis.bestMoveUci, "b8c6");
+assert.equal(clearAnalysis(analyzedAnnotation).engineAnalysis, undefined);
 
 const game = {
   id: "game-smoke",

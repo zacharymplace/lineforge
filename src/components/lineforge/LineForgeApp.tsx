@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BackupPanel } from "./BackupPanel";
 import { ChessBoardPanel } from "./ChessBoardPanel";
 import { DrillQueuePanel } from "./DrillQueuePanel";
+import { EngineAnalysisPanel } from "./EngineAnalysisPanel";
 import { GameImportPanel } from "./GameImportPanel";
 import { GameLibraryPanel } from "./GameLibraryPanel";
 import { MistakeDashboard } from "./MistakeDashboard";
@@ -13,8 +14,14 @@ import {
   createDrillAttempt,
   evaluateDrillMove,
 } from "@/lib/drill-queue/review";
+import {
+  attachAnalysisToAnnotation,
+  attachAnalysisToCard,
+} from "@/lib/engine/local-engine";
+import type { EngineAnalysisResult } from "@/lib/engine/types";
 import { createMistakeCard } from "@/lib/mistake-graph/cards";
 import { calculateMistakeStats } from "@/lib/mistake-graph/stats";
+import { emptyAnnotation } from "@/lib/move-ledger/annotations";
 import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledger/backup";
 import { createEmptyGame, createGameFromChess, loadGameAtPly, tryMove } from "@/lib/move-ledger/game";
 import {
@@ -104,6 +111,8 @@ export function LineForgeApp() {
   const stats = useMemo(() => calculateMistakeStats(cards), [cards]);
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
+  const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
+  const currentAnnotation = game.annotations[currentPly];
 
   function setActiveGame(nextGame: LineForgeGame) {
     setGame(nextGame);
@@ -328,6 +337,23 @@ export function LineForgeApp() {
     return result;
   }
 
+  function handleAttachAnalysisToAnnotation(analysis: EngineAnalysisResult) {
+    if (currentPly <= 0) {
+      return;
+    }
+
+    const annotation = game.annotations[currentPly] ?? emptyAnnotation(currentPly);
+    handleSaveAnnotation(attachAnalysisToAnnotation(annotation, analysis));
+  }
+
+  function handleAttachAnalysisToCard(cardId: string, analysis: EngineAnalysisResult) {
+    setCards((currentCards) =>
+      currentCards.map((card) =>
+        card.id === cardId ? attachAnalysisToCard(card, analysis) : card,
+      ),
+    );
+  }
+
   function handleExportBackup() {
     return serializeBackup(createBackup(upsertSavedGame(library, game, game.name), cards));
   }
@@ -356,8 +382,6 @@ export function LineForgeApp() {
       return error instanceof Error ? error.message : "Could not import that backup.";
     }
   }
-
-  const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
 
   return (
     <main className="min-h-screen bg-[#11110f] text-stone-100">
@@ -444,6 +468,14 @@ export function LineForgeApp() {
               currentPly={currentPly}
               onSaveAnnotation={handleSaveAnnotation}
               onCreateCard={handleCreateCard}
+            />
+            <EngineAnalysisPanel
+              activeFen={replayChess.fen()}
+              canAttachToAnnotation={currentPly > 0}
+              currentAnnotationAnalysis={currentAnnotation?.engineAnalysis}
+              selectedCard={selectedCard}
+              onAttachToAnnotation={handleAttachAnalysisToAnnotation}
+              onAttachToCard={handleAttachAnalysisToCard}
             />
           </div>
         </div>

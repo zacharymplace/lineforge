@@ -1,4 +1,5 @@
 import type { Move } from "chess.js";
+import type { EngineAnalysisResult } from "@/lib/engine/types";
 
 export const MOVE_VERDICTS = ["good", "mistake", "blunder", "unclear"] as const;
 
@@ -23,6 +24,7 @@ export type MoveAnnotation = {
   verdict: MoveVerdict;
   tags: MistakeTag[];
   updatedAt: string;
+  engineAnalysis?: EngineAnalysisResult;
 };
 
 export type LineForgeMove = Pick<
@@ -74,6 +76,7 @@ export type MistakeCard = {
   correct: number;
   lastReviewedAt?: string;
   attemptHistory: DrillAttempt[];
+  engineAnalysis?: EngineAnalysisResult;
 };
 
 export type ReviewResult = "remembered" | "missed";

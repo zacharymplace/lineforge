@@ -2,6 +2,7 @@
 
 import { Chessboard } from "react-chessboard";
 import { getSuccessRate } from "@/lib/drill-queue/review";
+import { formatEvaluation } from "@/lib/engine/local-engine";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 
 type DrillQueuePanelProps = {
@@ -135,6 +136,16 @@ export function DrillQueuePanel({
                     <span>{selectedCard.tags.join(", ") || "none"}</span>
                   </div>
                   <div className="text-stone-300">{selectedCard.note || "No note saved."}</div>
+                  {selectedCard.engineAnalysis ? (
+                    <div>
+                      <span className="text-stone-500">Engine: </span>
+                      <span className="font-mono text-amber-100">
+                        {selectedCard.engineAnalysis.bestMoveSan ??
+                          selectedCard.engineAnalysis.bestMoveUci}{" "}
+                        · {formatEvaluation(selectedCard.engineAnalysis.evaluation)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
                 {!attemptResult ? (
                   <div className="flex flex-wrap gap-2">
