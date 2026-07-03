@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Chessboard } from "react-chessboard";
+import {
+  clampPreviewPly,
+  getPreviewMoveLabel,
+  getPreviewPosition,
+} from "@/lib/move-ledger/import-preview";
 import type { LineForgeGame, PgnImportPreview } from "@/lib/move-ledger/types";
 
 type GameImportPanelProps = {
@@ -26,6 +32,7 @@ export function GameImportPanel({
 }: GameImportPanelProps) {
   const [draftPgn, setDraftPgn] = useState("");
   const [preview, setPreview] = useState<PgnImportPreview | null>(null);
+  const [previewPly, setPreviewPly] = useState(0);
   const [draftName, setDraftName] = useState("Imported Game");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
@@ -41,6 +48,7 @@ export function GameImportPanel({
     }
 
     setPreview(result.preview);
+    setPreviewPly(0);
     setDraftName(result.preview.suggestedName);
     setMessage("PGN preview ready.");
     setIsError(false);
@@ -53,6 +61,7 @@ export function GameImportPanel({
 
     onConfirmImport(preview, draftName);
     setPreview(null);
+    setPreviewPly(0);
     setDraftPgn("");
     setMessage("PGN imported as an unsaved draft.");
     setIsError(false);
@@ -60,6 +69,7 @@ export function GameImportPanel({
 
   function handleCancel() {
     setPreview(null);
+    setPreviewPly(0);
     setMessage("Import canceled.");
     setIsError(false);
     onCancelImport();
@@ -137,6 +147,11 @@ export function GameImportPanel({
               <MoveSnippetList label="Last moves" moves={preview.movePreview.last} />
             ) : null}
           </div>
+          <PreviewBoardScrubber
+            preview={preview}
+            previewPly={previewPly}
+            onGoToPly={setPreviewPly}
+          />
           <label className="grid gap-1">
             <span className="text-stone-500">Draft name</span>
             <input
@@ -188,6 +203,81 @@ export function GameImportPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function PreviewBoardScrubber({
+  preview,
+  previewPly,
+  onGoToPly,
+}: {
+  preview: PgnImportPreview;
+  previewPly: number;
+  onGoToPly: (ply: number) => void;
+}) {
+  const safePly = clampPreviewPly(previewPly, preview.boardPreview.totalPlyCount);
+  const position = getPreviewPosition(preview.boardPreview, safePly);
+  const moveLabel = getPreviewMoveLabel(preview.boardPreview, safePly);
+
+  function goToPly(ply: number) {
+    onGoToPly(clampPreviewPly(ply, preview.boardPreview.totalPlyCount));
+  }
+
+  return (
+    <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="font-medium text-stone-200">Preview board</div>
+          <div className="text-xs text-stone-500">Imported PGN only</div>
+        </div>
+        <div className="font-mono text-xs text-stone-400">
+          Ply {safePly} / {preview.boardPreview.totalPlyCount}
+        </div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+        <div className="max-w-[180px] overflow-hidden rounded-md border border-stone-800 bg-stone-950 p-1">
+          <Chessboard
+            options={{
+              id: "lineforge-import-preview-board",
+              position: position.fen,
+              allowDragging: false,
+              boardStyle: { borderRadius: "4px" },
+              darkSquareStyle: { backgroundColor: "#6f5b43" },
+              lightSquareStyle: { backgroundColor: "#d7c7a4" },
+            }}
+          />
+        </div>
+        <div className="grid content-start gap-3">
+          <div className="grid gap-1 rounded-md bg-black/30 p-2">
+            <div className="text-xs text-stone-500">Current move</div>
+            <div className="font-mono text-amber-100">{moveLabel}</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="lf-button" onClick={() => goToPly(0)}>
+              Start
+            </button>
+            <button className="lf-button" onClick={() => goToPly(safePly - 1)}>
+              Previous
+            </button>
+            <button className="lf-button" onClick={() => goToPly(safePly + 1)}>
+              Next
+            </button>
+            <button
+              className="lf-button"
+              onClick={() => goToPly(preview.boardPreview.totalPlyCount)}
+            >
+              End
+            </button>
+          </div>
+          <div>
+            <div className="mb-1 text-xs text-stone-500">Preview FEN</div>
+            <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+              {position.fen}
+            </code>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

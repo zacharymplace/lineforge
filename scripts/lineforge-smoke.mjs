@@ -258,6 +258,26 @@ function parsePgnImportPreview(pgn, hasUnsavedChangesValue) {
         hasDistinctLastMoves,
       };
     };
+    const buildPreviewPositions = (previewPgn) => {
+      const boardChess = new Chess();
+      boardChess.loadPgn(previewPgn, { strict: false });
+      const moves = boardChess.history({ verbose: true });
+
+      return {
+        positions: [
+          {
+            ply: 0,
+            fen: new Chess().fen(),
+          },
+          ...moves.map((move, index) => ({
+            ply: index + 1,
+            fen: move.after,
+            moveSan: move.san,
+          })),
+        ],
+        totalPlyCount: moves.length,
+      };
+    };
 
     return {
       ok: true,
@@ -267,6 +287,7 @@ function parsePgnImportPreview(pgn, hasUnsavedChangesValue) {
         previewTitle,
         suggestedName: previewTitle,
         movePreview: createMovePreview(history),
+        boardPreview: buildPreviewPositions(trimmedPgn),
         moveCount: history.length,
         finalFen: previewChess.fen(),
         validationStatus: "valid",
@@ -282,6 +303,19 @@ function parsePgnImportPreview(pgn, hasUnsavedChangesValue) {
       error: error instanceof Error ? error.message : "Could not parse that PGN.",
     };
   }
+}
+
+function clampPreviewPly(ply, totalPlyCount) {
+  return Math.max(0, Math.min(ply, totalPlyCount));
+}
+
+function getPreviewPosition(boardPreview, ply) {
+  const safePly = clampPreviewPly(ply, boardPreview.totalPlyCount);
+  return boardPreview.positions.find((position) => position.ply === safePly) ?? boardPreview.positions[0];
+}
+
+function getPreviewMoveLabel(boardPreview, ply) {
+  return getPreviewPosition(boardPreview, ply).moveSan ?? "Start position";
 }
 
 function createGameFromImportPreview(preview, name) {
@@ -388,6 +422,22 @@ assert.equal(previewResult.preview.metadata.date, "2026.07.03");
 assert.equal(previewResult.preview.metadata.result, "1-0");
 assert.equal(previewResult.preview.moveCount, 6);
 assert.equal(previewResult.preview.movePreview.totalPlyCount, 6);
+assert.equal(previewResult.preview.boardPreview.totalPlyCount, 6);
+assert.equal(previewResult.preview.boardPreview.positions.length, 7);
+assert.equal(previewResult.preview.boardPreview.positions[0].fen, new Chess().fen());
+assert.equal(
+  getPreviewPosition(previewResult.preview.boardPreview, 6).fen,
+  previewResult.preview.finalFen,
+);
+assert.equal(
+  getPreviewPosition(previewResult.preview.boardPreview, 99).fen,
+  previewResult.preview.finalFen,
+);
+assert.equal(getPreviewPosition(previewResult.preview.boardPreview, -4).fen, new Chess().fen());
+assert.equal(clampPreviewPly(-2, previewResult.preview.boardPreview.totalPlyCount), 0);
+assert.equal(clampPreviewPly(99, previewResult.preview.boardPreview.totalPlyCount), 6);
+assert.equal(getPreviewMoveLabel(previewResult.preview.boardPreview, 0), "Start position");
+assert.equal(getPreviewMoveLabel(previewResult.preview.boardPreview, 6), "a6");
 assert.deepEqual(
   previewResult.preview.movePreview.first.map((move) => move.san),
   ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6"],
@@ -401,6 +451,9 @@ assert.equal(previewResult.preview.hasUnsavedWarning, true);
 assert.match(previewResult.preview.warning, /unsaved changes/i);
 const canceledActiveGame = activeGame;
 assert.equal(canceledActiveGame.id, game.id);
+const scrubbedPreviewPosition = getPreviewPosition(previewResult.preview.boardPreview, 3);
+assert.equal(scrubbedPreviewPosition.moveSan, "Nf3");
+assert.equal(activeGame.id, game.id);
 activeGame = createGameFromImportPreview(previewResult.preview, "Ada prep game");
 assert.notEqual(activeGame.id, game.id);
 assert.equal(activeGame.name, "Ada prep game");

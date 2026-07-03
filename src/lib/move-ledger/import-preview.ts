@@ -2,6 +2,8 @@ import { Chess } from "chess.js";
 import { createGameFromChess } from "./game";
 import type {
   LineForgeGame,
+  PgnBoardPreview,
+  PgnBoardPreviewPosition,
   PgnImportMetadata,
   PgnImportResult,
   PgnMovePreview,
@@ -29,6 +31,7 @@ export function parsePgnImportPreview(
     const metadata = getMetadata(headers);
     const history = chess.history();
     const previewTitle = suggestDraftName(metadata);
+    const boardPreview = buildPreviewPositions(trimmedPgn);
 
     return {
       ok: true,
@@ -38,6 +41,7 @@ export function parsePgnImportPreview(
         previewTitle,
         suggestedName: previewTitle,
         movePreview: createMovePreview(history),
+        boardPreview,
         moveCount: history.length,
         finalFen: chess.fen(),
         validationStatus: "valid",
@@ -96,6 +100,47 @@ export function createMovePreview(moves: string[]): PgnMovePreview {
     totalPlyCount: moves.length,
     hasDistinctLastMoves,
   };
+}
+
+export function buildPreviewPositions(pgn: string): PgnBoardPreview {
+  const chess = new Chess();
+  chess.loadPgn(pgn, { strict: false });
+  const moves = chess.history({ verbose: true });
+
+  return {
+    positions: [
+      {
+        ply: 0,
+        fen: new Chess().fen(),
+      },
+      ...moves.map((move, index) => ({
+        ply: index + 1,
+        fen: move.after,
+        moveSan: move.san,
+      })),
+    ],
+    totalPlyCount: moves.length,
+  };
+}
+
+export function clampPreviewPly(ply: number, totalPlyCount: number) {
+  return Math.max(0, Math.min(ply, totalPlyCount));
+}
+
+export function getPreviewPosition(
+  boardPreview: PgnBoardPreview,
+  ply: number,
+): PgnBoardPreviewPosition {
+  const safePly = clampPreviewPly(ply, boardPreview.totalPlyCount);
+  return (
+    boardPreview.positions.find((position) => position.ply === safePly) ??
+    boardPreview.positions[0]
+  );
+}
+
+export function getPreviewMoveLabel(boardPreview: PgnBoardPreview, ply: number) {
+  const position = getPreviewPosition(boardPreview, ply);
+  return position.moveSan ?? "Start position";
 }
 
 function toSnippet(san: string, index: number) {

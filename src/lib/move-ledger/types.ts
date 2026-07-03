@@ -128,6 +128,7 @@ export type PgnImportPreview = {
   previewTitle: string;
   suggestedName: string;
   movePreview: PgnMovePreview;
+  boardPreview: PgnBoardPreview;
   moveCount: number;
   finalFen: string;
   validationStatus: "valid";
@@ -155,4 +156,15 @@ export type PgnMovePreview = {
   last: PgnMoveSnippet[];
   totalPlyCount: number;
   hasDistinctLastMoves: boolean;
+};
+
+export type PgnBoardPreviewPosition = {
+  ply: number;
+  fen: string;
+  moveSan?: string;
+};
+
+export type PgnBoardPreview = {
+  positions: PgnBoardPreviewPosition[];
+  totalPlyCount: number;
 };
