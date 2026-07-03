@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
-import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
+import {
+  DEFAULT_COACH_LENS_COMPARISON_IDS,
+  DEFAULT_COACH_LENS_ID,
+  buildCoachLensComparisonOutputs,
+  buildCoachLensOutput,
+} from "@/lib/coach-lenses/lenses";
 import type { CoachLensId, CoachLensInput } from "@/lib/coach-lenses/types";
 import { getSuccessRate } from "@/lib/drill-queue/review";
 import {
@@ -14,6 +19,7 @@ import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 import { buildCardReviewPacket } from "@/lib/review-packets/build";
 import type { ReviewPacket } from "@/lib/review-packets/types";
+import { CoachLensComparison } from "./CoachLensComparison";
 import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
@@ -55,6 +61,10 @@ export function DrillQueuePanel({
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
+  const [showLensComparison, setShowLensComparison] = useState(false);
+  const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
+    DEFAULT_COACH_LENS_COMPARISON_IDS,
+  );
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
@@ -85,6 +95,9 @@ export function DrillQueuePanel({
           sourceGameName: selectedCardGameName,
           card: selectedCard,
           coachLens: buildCoachLensOutput(selectedLensId, coachLensInput),
+          comparedCoachLenses: showLensComparison
+            ? buildCoachLensComparisonOutputs(comparisonLensIds, coachLensInput)
+            : undefined,
         }),
       );
       setExportError(null);
@@ -164,6 +177,21 @@ export function DrillQueuePanel({
               selectedLensId={selectedLensId}
               onSelectLens={setSelectedLensId}
             />
+            <div className="grid gap-3">
+              <button
+                className="lf-button w-fit"
+                onClick={() => setShowLensComparison((current) => !current)}
+              >
+                {showLensComparison ? "Hide lens comparison" : "Compare lenses"}
+              </button>
+              {showLensComparison ? (
+                <CoachLensComparison
+                  input={coachLensInput}
+                  selectedLensIds={comparisonLensIds}
+                  onSelectedLensIdsChange={setComparisonLensIds}
+                />
+              ) : null}
+            </div>
             <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
               <Chessboard
                 options={{

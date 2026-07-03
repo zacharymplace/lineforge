@@ -41,6 +41,12 @@ export const COACH_LENSES: CoachLens[] = [
 ];
 
 export const DEFAULT_COACH_LENS_ID: CoachLensId = "blunder-audit";
+export const DEFAULT_COACH_LENS_COMPARISON_IDS: CoachLensId[] = [
+  "blunder-audit",
+  "tactics",
+  "plan-mismatch",
+];
+export const MAX_COACH_LENS_COMPARISON = 3;
 
 export function buildCoachLensOutput(
   lensId: CoachLensId,
@@ -56,6 +62,30 @@ export function buildCoachLensOutput(
 
 export function getCoachLens(lensId: CoachLensId) {
   return COACH_LENSES.find((lens) => lens.id === lensId) ?? COACH_LENSES[0];
+}
+
+export function normalizeCoachLensComparisonSelection(
+  selectedLensIds: CoachLensId[],
+  toggledLensId: CoachLensId,
+) {
+  if (selectedLensIds.includes(toggledLensId)) {
+    const nextSelection = selectedLensIds.filter((lensId) => lensId !== toggledLensId);
+    return nextSelection.length ? nextSelection : [toggledLensId];
+  }
+
+  const nextSelection = [...selectedLensIds, toggledLensId];
+  return nextSelection.length > MAX_COACH_LENS_COMPARISON
+    ? nextSelection.slice(nextSelection.length - MAX_COACH_LENS_COMPARISON)
+    : nextSelection;
+}
+
+export function buildCoachLensComparisonOutputs(
+  lensIds: CoachLensId[],
+  input: CoachLensInput,
+) {
+  return lensIds.slice(0, MAX_COACH_LENS_COMPARISON).map((lensId) =>
+    buildCoachLensOutput(lensId, input),
+  );
 }
 
 function buildBlunderAuditLens(input: CoachLensInput): CoachLensOutput {

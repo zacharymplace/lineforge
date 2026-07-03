@@ -35,6 +35,7 @@ export type ReviewPacket = {
   engineAnalysis?: EngineAnalysisResult;
   reviewSummary: ExplanationSummary;
   coachLens?: CoachLensOutput;
+  comparedCoachLenses?: CoachLensOutput[];
   drillRecommendation?: string;
   reviewStats?: ReviewPacketStats;
   recentAttempts?: DrillAttempt[];
@@ -50,10 +51,12 @@ export type MoveReviewPacketInput = {
   moveSan?: string;
   annotation?: MoveAnnotation;
   coachLens?: CoachLensOutput;
+  comparedCoachLenses?: CoachLensOutput[];
 };
 
 export type CardReviewPacketInput = {
   sourceGameName?: string;
   card: MistakeCard;
   coachLens?: CoachLensOutput;
+  comparedCoachLenses?: CoachLensOutput[];
 };

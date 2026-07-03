@@ -225,6 +225,8 @@ const coachLensIds = [
   "opening-minimalist",
   "plan-mismatch",
 ];
+const defaultCoachLensComparisonIds = ["blunder-audit", "tactics", "plan-mismatch"];
+const maxCoachLensComparison = 3;
 
 function buildCoachLensOutput(lensId, input) {
   if (lensId === "tactics") return buildTacticsLens(input);
@@ -233,6 +235,24 @@ function buildCoachLensOutput(lensId, input) {
   if (lensId === "opening-minimalist") return buildOpeningMinimalistLens(input);
   if (lensId === "plan-mismatch") return buildPlanMismatchLens(input);
   return buildBlunderAuditLens(input);
+}
+
+function normalizeCoachLensComparisonSelection(selectedLensIds, toggledLensId) {
+  if (selectedLensIds.includes(toggledLensId)) {
+    const nextSelection = selectedLensIds.filter((lensId) => lensId !== toggledLensId);
+    return nextSelection.length ? nextSelection : [toggledLensId];
+  }
+
+  const nextSelection = [...selectedLensIds, toggledLensId];
+  return nextSelection.length > maxCoachLensComparison
+    ? nextSelection.slice(nextSelection.length - maxCoachLensComparison)
+    : nextSelection;
+}
+
+function buildCoachLensComparisonOutputs(lensIds, input) {
+  return lensIds
+    .slice(0, maxCoachLensComparison)
+    .map((lensId) => buildCoachLensOutput(lensId, input));
 }
 
 function buildBlunderAuditLens(input) {
@@ -381,6 +401,7 @@ function buildMoveReviewPacket(input) {
     engineAnalysis: input.annotation?.engineAnalysis,
     reviewSummary,
     coachLens: input.coachLens,
+    comparedCoachLenses: input.comparedCoachLenses,
     drillRecommendation: reviewSummary.recommendation,
     createdAt: "2026-07-03T12:00:00.000Z",
   };
@@ -417,6 +438,7 @@ function buildCardReviewPacket(input) {
     engineAnalysis: input.card.engineAnalysis,
     reviewSummary,
     coachLens: input.coachLens,
+    comparedCoachLenses: input.comparedCoachLenses,
     drillRecommendation: reviewSummary.recommendation,
     reviewStats: {
       attempts: input.card.attempts,
@@ -476,6 +498,16 @@ function renderReviewPacketMarkdown(packet) {
           `Next action: ${packet.coachLens.recommendedNextAction}`,
         ]
       : ["No coach lens selected for this packet."]),
+    "",
+    "## Compared coach lenses",
+    ...(packet.comparedCoachLenses?.length
+      ? packet.comparedCoachLenses.flatMap((coachLens) => [
+          `${coachLens.title} (${coachLens.confidence} confidence)`,
+          coachLens.summary,
+          ...coachLens.points.slice(0, 3).map((point) => `- ${point.text}`),
+          `Next action: ${coachLens.recommendedNextAction}`,
+        ])
+      : ["No coach lens comparison selected for this packet."]),
     "",
     "## Drill recommendation",
     packet.drillRecommendation ?? "No drill recommendation available.",
@@ -923,6 +955,37 @@ for (const lensId of coachLensIds) {
   assert.ok(output.recommendedNextAction.length > 0);
   assert.ok(["low", "medium", "high"].includes(output.confidence));
 }
+const defaultComparisonOutputs = buildCoachLensComparisonOutputs(
+  defaultCoachLensComparisonIds,
+  richLensInput,
+);
+assert.deepEqual(
+  defaultComparisonOutputs.map((output) => output.lensId),
+  defaultCoachLensComparisonIds,
+);
+assert.equal(defaultComparisonOutputs.length, 3);
+assert.deepEqual(
+  normalizeCoachLensComparisonSelection(
+    ["blunder-audit", "tactics", "plan-mismatch"],
+    "king-safety",
+  ),
+  ["tactics", "plan-mismatch", "king-safety"],
+);
+assert.deepEqual(
+  normalizeCoachLensComparisonSelection(["blunder-audit"], "blunder-audit"),
+  ["blunder-audit"],
+);
+const missingDataComparison = buildCoachLensComparisonOutputs(
+  defaultCoachLensComparisonIds,
+  {},
+);
+assert.equal(missingDataComparison.length, 3);
+assert.ok(missingDataComparison.every((output) => output.confidence === "low"));
+assert.ok(
+  missingDataComparison.every((output) =>
+    output.points.some((point) => /limited review data/i.test(point.text)),
+  ),
+);
 assert.match(
   buildCoachLensOutput("blunder-audit", richLensInput).points.map((point) => point.text).join(" "),
   /one-move safety/i,
@@ -1046,6 +1109,7 @@ const movePacket = buildMoveReviewPacket({
   moveSan: game.moves[3].san,
   annotation: analyzedAnnotation,
   coachLens: buildCoachLensOutput("tactics", richLensInput),
+  comparedCoachLenses: defaultComparisonOutputs,
 });
 assert.equal(movePacket.lineforgeReviewPacketVersion, 1);
 assert.equal(movePacket.sourceType, "move");
@@ -1053,15 +1117,19 @@ assert.equal(movePacket.sourceGameId, game.id);
 assert.equal(movePacket.ply, 4);
 assert.equal(movePacket.engineAnalysis.bestMoveSan, "Nc6");
 assert.equal(movePacket.coachLens.lensId, "tactics");
+assert.equal(movePacket.comparedCoachLenses.length, 3);
 assert.ok(
   movePacket.reviewSummary.points.some((point) => point.text === "Engine prefers Nc6 at depth 10."),
 );
 const parsedMovePacket = JSON.parse(serializeReviewPacketJson(movePacket));
 assert.equal(parsedMovePacket.lineforgeReviewPacketVersion, 1);
+assert.equal(parsedMovePacket.comparedCoachLenses.length, 3);
 const moveMarkdown = renderReviewPacketMarkdown(movePacket);
 assert.match(moveMarkdown, /LineForge Move Review Packet/);
 assert.match(moveMarkdown, /## Review summary/);
 assert.match(moveMarkdown, /## Coach lens/);
+assert.match(moveMarkdown, /## Compared coach lenses/);
+assert.match(moveMarkdown, /Plan Mismatch Lens/);
 assert.match(moveMarkdown, /Engine prefers Nc6 at depth 10/);
 assert.equal(getReviewPacketTitle(movePacket), "LineForge Move Review Packet Nc6, ply 4");
 assert.equal(
@@ -1286,6 +1354,10 @@ const cardPacket = buildCardReviewPacket({
     attempts: manualReviewed.attempts,
     correct: manualReviewed.correct,
   }),
+  comparedCoachLenses: buildCoachLensComparisonOutputs(
+    ["blunder-audit", "trade-check", "plan-mismatch"],
+    richLensInput,
+  ),
 });
 assert.equal(cardPacket.lineforgeReviewPacketVersion, 1);
 assert.equal(cardPacket.sourceType, "card");
@@ -1296,6 +1368,10 @@ assert.equal(cardPacket.recentAttempts.length, 3);
 assert.equal(cardPacket.recentAttempts[0].method, "manual-reveal");
 assert.equal(cardPacket.drillRecommendation, "Keep this card in active review.");
 assert.equal(cardPacket.coachLens.lensId, "king-safety");
+assert.deepEqual(
+  cardPacket.comparedCoachLenses.map((output) => output.lensId),
+  ["blunder-audit", "trade-check", "plan-mismatch"],
+);
 const parsedCardPacket = JSON.parse(serializeReviewPacketJson(cardPacket));
 assert.equal(parsedCardPacket.reviewStats.attempts, 3);
 const cardMarkdown = renderReviewPacketMarkdown(cardPacket);

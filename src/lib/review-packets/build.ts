@@ -33,6 +33,7 @@ export function buildMoveReviewPacket(input: MoveReviewPacketInput): ReviewPacke
     engineAnalysis: input.annotation?.engineAnalysis,
     reviewSummary,
     coachLens: input.coachLens,
+    comparedCoachLenses: input.comparedCoachLenses,
     drillRecommendation: reviewSummary.recommendation,
     createdAt: new Date().toISOString(),
   };
@@ -69,6 +70,7 @@ export function buildCardReviewPacket(input: CardReviewPacketInput): ReviewPacke
     engineAnalysis: input.card.engineAnalysis,
     reviewSummary,
     coachLens: input.coachLens,
+    comparedCoachLenses: input.comparedCoachLenses,
     drillRecommendation: reviewSummary.recommendation,
     reviewStats: {
       attempts: input.card.attempts,

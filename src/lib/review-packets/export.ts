@@ -40,6 +40,9 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket) {
     "## Coach lens",
     ...renderCoachLens(packet),
     "",
+    "## Compared coach lenses",
+    ...renderComparedCoachLenses(packet),
+    "",
     "## Drill recommendation",
     packet.drillRecommendation ?? "No drill recommendation available.",
     "",
@@ -105,6 +108,20 @@ export function getReviewPacketTitle(packet: ReviewPacket) {
   const ply = packet.ply ? `, ply ${packet.ply}` : "";
 
   return `LineForge ${source} Review Packet${move}${ply}`;
+}
+
+function renderComparedCoachLenses(packet: ReviewPacket) {
+  if (!packet.comparedCoachLenses?.length) {
+    return ["No coach lens comparison selected for this packet."];
+  }
+
+  return packet.comparedCoachLenses.flatMap((coachLens) => [
+    `${coachLens.title} (${coachLens.confidence} confidence)`,
+    coachLens.summary,
+    ...coachLens.points.slice(0, 3).map((point) => `- ${point.text}`),
+    `Next action: ${coachLens.recommendedNextAction}`,
+    "",
+  ]);
 }
 
 function renderCoachLens(packet: ReviewPacket) {

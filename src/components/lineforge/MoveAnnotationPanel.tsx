@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
+import {
+  DEFAULT_COACH_LENS_COMPARISON_IDS,
+  DEFAULT_COACH_LENS_ID,
+  buildCoachLensComparisonOutputs,
+  buildCoachLensOutput,
+} from "@/lib/coach-lenses/lenses";
 import type { CoachLensId, CoachLensInput } from "@/lib/coach-lenses/types";
 import { MISTAKE_TAGS, MOVE_VERDICTS, type LineForgeGame } from "@/lib/move-ledger/types";
 import type { MistakeCard, MoveAnnotation, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
@@ -14,6 +19,7 @@ import {
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import { buildMoveReviewPacket } from "@/lib/review-packets/build";
 import type { ReviewPacket } from "@/lib/review-packets/types";
+import { CoachLensComparison } from "./CoachLensComparison";
 import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
@@ -36,6 +42,10 @@ export function MoveAnnotationPanel({
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
+  const [showLensComparison, setShowLensComparison] = useState(false);
+  const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
+    DEFAULT_COACH_LENS_COMPARISON_IDS,
+  );
   const coachLensInput: CoachLensInput = {
     moveSan: move?.san,
     ply: move ? currentPly : undefined,
@@ -72,6 +82,9 @@ export function MoveAnnotationPanel({
           moveSan: move.san,
           annotation,
           coachLens: buildCoachLensOutput(selectedLensId, coachLensInput),
+          comparedCoachLenses: showLensComparison
+            ? buildCoachLensComparisonOutputs(comparisonLensIds, coachLensInput)
+            : undefined,
         }),
       );
       setExportError(null);
@@ -154,6 +167,24 @@ export function MoveAnnotationPanel({
           selectedLensId={selectedLensId}
           onSelectLens={setSelectedLensId}
         />
+      ) : null}
+
+      {move ? (
+        <div className="grid gap-3">
+          <button
+            className="lf-button w-fit"
+            onClick={() => setShowLensComparison((current) => !current)}
+          >
+            {showLensComparison ? "Hide lens comparison" : "Compare lenses"}
+          </button>
+          {showLensComparison ? (
+            <CoachLensComparison
+              input={coachLensInput}
+              selectedLensIds={comparisonLensIds}
+              onSelectedLensIdsChange={setComparisonLensIds}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {annotation.engineAnalysis ? (
