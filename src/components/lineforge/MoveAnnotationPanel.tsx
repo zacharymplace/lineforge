@@ -9,6 +9,8 @@ import {
   getStoredAnalysisLabel,
 } from "@/lib/engine/local-engine";
 import { buildExplanationSummary } from "@/lib/explanations/templates";
+import { buildMoveReviewPacket } from "@/lib/review-packets/build";
+import { downloadReviewPacket } from "@/lib/review-packets/export";
 import { ReviewSummary } from "./ReviewSummary";
 
 type MoveAnnotationPanelProps = {
@@ -34,6 +36,25 @@ export function MoveAnnotationPanel({
       ply: currentPly,
       updatedAt: new Date().toISOString(),
     });
+  }
+
+  function handleExportPacket(format: "json" | "markdown") {
+    if (!move) {
+      return;
+    }
+
+    downloadReviewPacket(
+      buildMoveReviewPacket({
+        sourceGameId: game.id,
+        sourceGameName: game.name,
+        ply: currentPly,
+        fenBefore: move.before,
+        fenAfter: move.after,
+        moveSan: move.san,
+        annotation,
+      }),
+      format,
+    );
   }
 
   return (
@@ -87,9 +108,25 @@ export function MoveAnnotationPanel({
         </div>
       </div>
 
-      <button className="lf-button-primary" disabled={!move} onClick={onCreateCard}>
-        Create mistake card
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button className="lf-button-primary" disabled={!move} onClick={onCreateCard}>
+          Create mistake card
+        </button>
+        <button
+          className="lf-button"
+          disabled={!move}
+          onClick={() => handleExportPacket("json")}
+        >
+          Export move packet JSON
+        </button>
+        <button
+          className="lf-button"
+          disabled={!move}
+          onClick={() => handleExportPacket("markdown")}
+        >
+          Export move packet MD
+        </button>
+      </div>
 
       {annotation.engineAnalysis ? (
         <div className="grid gap-3">

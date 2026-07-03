@@ -9,10 +9,15 @@ import {
 } from "@/lib/engine/local-engine";
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
+import { buildCardReviewPacket } from "@/lib/review-packets/build";
+import { downloadReviewPacket } from "@/lib/review-packets/export";
 import { ReviewSummary } from "./ReviewSummary";
 
 type DrillQueuePanelProps = {
   cards: MistakeCard[];
+  activeGameId?: string;
+  activeGameName?: string;
+  sourceGameNames?: Record<string, string>;
   selectedCardId: string | null;
   revealed: boolean;
   onSelectCard: (cardId: string) => void;
@@ -28,6 +33,9 @@ type DrillQueuePanelProps = {
 
 export function DrillQueuePanel({
   cards,
+  activeGameId,
+  activeGameName,
+  sourceGameNames,
   selectedCardId,
   revealed,
   onSelectCard,
@@ -39,6 +47,23 @@ export function DrillQueuePanel({
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const selectedAttempts = selectedCard?.attemptHistory ?? [];
   const lastAttempt = selectedAttempts.at(-1);
+  const selectedCardGameName =
+    (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
+    (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
+
+  function handleExportPacket(format: "json" | "markdown") {
+    if (!selectedCard) {
+      return;
+    }
+
+    downloadReviewPacket(
+      buildCardReviewPacket({
+        sourceGameName: selectedCardGameName,
+        card: selectedCard,
+      }),
+      format,
+    );
+  }
 
   return (
     <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
@@ -92,6 +117,14 @@ export function DrillQueuePanel({
                 <div className="text-xs text-stone-500">Last result</div>
                 <div className="text-stone-200">{lastAttempt?.result ?? "None"}</div>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="lf-button" onClick={() => handleExportPacket("json")}>
+                Export card packet JSON
+              </button>
+              <button className="lf-button" onClick={() => handleExportPacket("markdown")}>
+                Export card packet MD
+              </button>
             </div>
             <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
               <Chessboard

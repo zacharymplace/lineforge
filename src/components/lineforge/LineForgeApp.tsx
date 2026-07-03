@@ -113,6 +113,10 @@ export function LineForgeApp() {
   const hasDirtyGame = hasUnsavedChanges(library, game);
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const currentAnnotation = game.annotations[currentPly];
+  const sourceGameNames = useMemo(
+    () => Object.fromEntries(library.savedGames.map((savedGame) => [savedGame.id, savedGame.name])),
+    [library.savedGames],
+  );
 
   function setActiveGame(nextGame: LineForgeGame) {
     setGame(nextGame);
@@ -483,6 +487,9 @@ export function LineForgeApp() {
         <MistakeDashboard stats={stats} />
         <DrillQueuePanel
           cards={cards}
+          activeGameId={game.id}
+          activeGameName={game.name}
+          sourceGameNames={sourceGameNames}
           selectedCardId={selectedCard?.id ?? null}
           revealed={selectedCard ? revealedCardId === selectedCard.id : false}
           onSelectCard={handleSelectCard}

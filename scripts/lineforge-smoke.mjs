@@ -217,6 +217,156 @@ function clearAnalysis(value) {
   return rest;
 }
 
+function buildMoveReviewPacket(input) {
+  const packetTags = input.annotation?.tags ?? [];
+  const reviewSummary = buildExplanationSummary({
+    moveSan: input.moveSan,
+    verdict: input.annotation?.verdict,
+    tags: packetTags,
+    userNote: input.annotation?.thought,
+    engineAnalysis: input.annotation?.engineAnalysis,
+  });
+
+  return {
+    id: "packet-move-smoke",
+    lineforgeReviewPacketVersion: 1,
+    sourceType: "move",
+    sourceGameId: input.sourceGameId,
+    sourceGameName: input.sourceGameName,
+    ply: input.ply,
+    fenBefore: input.fenBefore,
+    fenAfter: input.fenAfter,
+    moveSan: input.moveSan,
+    userNote: input.annotation?.thought,
+    verdict: input.annotation?.verdict,
+    tags: packetTags,
+    engineAnalysis: input.annotation?.engineAnalysis,
+    reviewSummary,
+    drillRecommendation: reviewSummary.recommendation,
+    createdAt: "2026-07-03T12:00:00.000Z",
+  };
+}
+
+function buildCardReviewPacket(input) {
+  const reviewSummary = buildExplanationSummary({
+    moveSan: input.card.moveSan,
+    verdict: input.card.verdict,
+    tags: input.card.tags,
+    userNote: input.card.note,
+    engineAnalysis: input.card.engineAnalysis,
+    card: {
+      ply: input.card.ply,
+      attempts: input.card.attempts,
+      correct: input.card.correct,
+      attemptHistory: input.card.attemptHistory,
+    },
+  });
+
+  return {
+    id: "packet-card-smoke",
+    lineforgeReviewPacketVersion: 1,
+    sourceType: "card",
+    sourceGameId: input.card.sourceGameId,
+    sourceGameName: input.sourceGameName,
+    ply: input.card.ply,
+    fenBefore: input.card.fenBefore,
+    fenAfter: input.card.fenAfter,
+    moveSan: input.card.moveSan,
+    userNote: input.card.note,
+    verdict: input.card.verdict,
+    tags: input.card.tags,
+    engineAnalysis: input.card.engineAnalysis,
+    reviewSummary,
+    drillRecommendation: reviewSummary.recommendation,
+    reviewStats: {
+      attempts: input.card.attempts,
+      correct: input.card.correct,
+      lastReviewedAt: input.card.lastReviewedAt,
+    },
+    recentAttempts: [...input.card.attemptHistory].slice(-5).reverse(),
+    createdAt: "2026-07-03T12:00:00.000Z",
+  };
+}
+
+function serializeReviewPacketJson(packet) {
+  return JSON.stringify(packet, null, 2);
+}
+
+function renderReviewPacketMarkdown(packet) {
+  const lines = [
+    `# LineForge ${packet.sourceType === "card" ? "Card" : "Move"} Review Packet`,
+    "",
+    `Source: ${packet.sourceType}`,
+    packet.sourceGameName ? `Game: ${packet.sourceGameName}` : undefined,
+    "",
+    "## Position",
+    packet.fenBefore ? `FEN before: \`${packet.fenBefore}\`` : "FEN before: Unknown",
+    packet.fenAfter ? `FEN after: \`${packet.fenAfter}\`` : undefined,
+    "",
+    "## Move",
+    packet.ply ? `Ply: ${packet.ply}` : undefined,
+    packet.moveSan ? `Move: ${packet.moveSan}` : "Move: Unknown",
+    "",
+    "## User note",
+    packet.userNote?.trim() ? packet.userNote.trim() : "No user note saved.",
+    "",
+    "## Verdict/tags",
+    packet.verdict ? `Verdict: ${packet.verdict}` : "Verdict: Unknown",
+    `Tags: ${packet.tags.length ? packet.tags.join(", ") : "none"}`,
+    "",
+    "## Engine analysis",
+    ...(packet.engineAnalysis
+      ? [
+          `Engine: ${packet.engineAnalysis.engineName}`,
+          `Best move: ${packet.engineAnalysis.bestMoveSan ?? packet.engineAnalysis.bestMoveUci}`,
+          `Evaluation: ${formatEvaluation(packet.engineAnalysis.evaluation)}`,
+          `Depth: ${packet.engineAnalysis.depth}`,
+        ]
+      : ["No engine analysis saved."]),
+    "",
+    "## Review summary",
+    ...packet.reviewSummary.points.map((point) => `- ${point.text}`),
+    "",
+    "## Drill recommendation",
+    packet.drillRecommendation ?? "No drill recommendation available.",
+    "",
+    "## Review history",
+    ...(packet.reviewStats
+      ? [
+          `Attempts: ${packet.reviewStats.attempts}`,
+          `Correct: ${packet.reviewStats.correct}`,
+          ...(packet.recentAttempts ?? []).map(
+            (attempt) =>
+              `- ${attempt.result} by ${attempt.method}; expected ${attempt.expectedMoveSan}`,
+          ),
+        ]
+      : ["No review history for this move packet."]),
+    "",
+  ].filter((line) => line !== undefined);
+
+  return `${lines.join("\n")}\n`;
+}
+
+function safeFilenamePart(value) {
+  const safe = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return safe || "unknown";
+}
+
+function getReviewPacketFilename(packet, format) {
+  const extension = format === "json" ? "json" : "md";
+  const date = safeFilenamePart(packet.createdAt.slice(0, 10));
+
+  if (packet.sourceType === "card") {
+    return `lineforge-card-${date}-${safeFilenamePart(packet.id)}.${extension}`;
+  }
+
+  return `lineforge-move-${date}-ply-${safeFilenamePart(String(packet.ply ?? "unknown"))}.${extension}`;
+}
+
 function applyReviewResult(card, result) {
   return {
     ...card,
@@ -691,6 +841,46 @@ const game = {
   updatedAt: new Date().toISOString(),
 };
 
+const movePacket = buildMoveReviewPacket({
+  sourceGameId: game.id,
+  sourceGameName: game.name,
+  ply: 4,
+  fenBefore: game.moves[3].before,
+  fenAfter: game.moves[3].after,
+  moveSan: game.moves[3].san,
+  annotation: analyzedAnnotation,
+});
+assert.equal(movePacket.lineforgeReviewPacketVersion, 1);
+assert.equal(movePacket.sourceType, "move");
+assert.equal(movePacket.sourceGameId, game.id);
+assert.equal(movePacket.ply, 4);
+assert.equal(movePacket.engineAnalysis.bestMoveSan, "Nc6");
+assert.ok(
+  movePacket.reviewSummary.points.some((point) => point.text === "Engine prefers Nc6 at depth 10."),
+);
+const parsedMovePacket = JSON.parse(serializeReviewPacketJson(movePacket));
+assert.equal(parsedMovePacket.lineforgeReviewPacketVersion, 1);
+const moveMarkdown = renderReviewPacketMarkdown(movePacket);
+assert.match(moveMarkdown, /LineForge Move Review Packet/);
+assert.match(moveMarkdown, /## Review summary/);
+assert.match(moveMarkdown, /Engine prefers Nc6 at depth 10/);
+assert.equal(
+  getReviewPacketFilename(movePacket, "json"),
+  "lineforge-move-2026-07-03-ply-4.json",
+);
+assert.equal(safeFilenamePart("Ply 4 / Nc6!"), "ply-4-nc6");
+
+const fallbackPacket = buildMoveReviewPacket({
+  ply: 0,
+  annotation: { ...annotation, engineAnalysis: undefined },
+});
+assert.equal(fallbackPacket.lineforgeReviewPacketVersion, 1);
+assert.ok(
+  fallbackPacket.reviewSummary.points.some(
+    (point) => point.text === "No engine analysis is saved for this position yet.",
+  ),
+);
+
 const serializedGames = JSON.parse(JSON.stringify([game]));
 assert.equal(serializedGames[0].annotations[4].verdict, "mistake");
 
@@ -880,6 +1070,30 @@ const manualReviewed = appendAttempt(
 assert.equal(manualReviewed.attempts, 3);
 assert.equal(manualReviewed.correct, 1);
 assert.equal(manualReviewed.attemptHistory.at(-1).method, "manual-reveal");
+
+const cardPacket = buildCardReviewPacket({
+  sourceGameName: game.name,
+  card: attachAnalysisToCard(manualReviewed, engineResult),
+});
+assert.equal(cardPacket.lineforgeReviewPacketVersion, 1);
+assert.equal(cardPacket.sourceType, "card");
+assert.equal(cardPacket.sourceGameId, card.sourceGameId);
+assert.equal(cardPacket.reviewStats.attempts, 3);
+assert.equal(cardPacket.reviewStats.correct, 1);
+assert.equal(cardPacket.recentAttempts.length, 3);
+assert.equal(cardPacket.recentAttempts[0].method, "manual-reveal");
+assert.equal(cardPacket.drillRecommendation, "Keep this card in active review.");
+const parsedCardPacket = JSON.parse(serializeReviewPacketJson(cardPacket));
+assert.equal(parsedCardPacket.reviewStats.attempts, 3);
+const cardMarkdown = renderReviewPacketMarkdown(cardPacket);
+assert.match(cardMarkdown, /LineForge Card Review Packet/);
+assert.match(cardMarkdown, /## Review history/);
+assert.match(cardMarkdown, /Attempts: 3/);
+assert.equal(
+  getReviewPacketFilename(cardPacket, "markdown"),
+  "lineforge-card-2026-07-03-packet-card-smoke.md",
+);
+
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",
   tags: ["missed tactic"],
