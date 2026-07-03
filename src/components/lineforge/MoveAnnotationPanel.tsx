@@ -8,6 +8,8 @@ import {
   formatEvaluation,
   getStoredAnalysisLabel,
 } from "@/lib/engine/local-engine";
+import { buildExplanationSummary } from "@/lib/explanations/templates";
+import { ReviewSummary } from "./ReviewSummary";
 
 type MoveAnnotationPanelProps = {
   game: LineForgeGame;
@@ -90,15 +92,26 @@ export function MoveAnnotationPanel({
       </button>
 
       {annotation.engineAnalysis ? (
-        <div className="grid gap-1 rounded-md bg-black/30 p-3 text-sm">
-          <div className="text-stone-500">{getStoredAnalysisLabel("move")}</div>
-          <div className="font-mono text-amber-100">
-            {annotation.engineAnalysis.bestMoveSan ?? annotation.engineAnalysis.bestMoveUci} ·{" "}
-            {formatEvaluation(annotation.engineAnalysis.evaluation)}
+        <div className="grid gap-3">
+          <div className="grid gap-1 rounded-md bg-black/30 p-3 text-sm">
+            <div className="text-stone-500">{getStoredAnalysisLabel("move")}</div>
+            <div className="font-mono text-amber-100">
+              {annotation.engineAnalysis.bestMoveSan ?? annotation.engineAnalysis.bestMoveUci} ·{" "}
+              {formatEvaluation(annotation.engineAnalysis.evaluation)}
+            </div>
+            <div className="text-xs text-stone-500">
+              Analyzed {formatAnalysisTimestamp(annotation.engineAnalysis.analyzedAt)}
+            </div>
           </div>
-          <div className="text-xs text-stone-500">
-            Analyzed {formatAnalysisTimestamp(annotation.engineAnalysis.analyzedAt)}
-          </div>
+          <ReviewSummary
+            summary={buildExplanationSummary({
+              moveSan: move?.san,
+              verdict: annotation.verdict,
+              tags: annotation.tags,
+              userNote: annotation.thought,
+              engineAnalysis: annotation.engineAnalysis,
+            })}
+          />
         </div>
       ) : null}
     </section>

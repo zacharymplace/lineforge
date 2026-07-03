@@ -76,6 +76,97 @@ function getStoredAnalysisLabel(kind) {
   return "Saved card analysis";
 }
 
+function buildExplanationSummary(input) {
+  const points = [];
+
+  if (input.engineAnalysis) {
+    const bestMove = input.engineAnalysis.bestMoveSan ?? input.engineAnalysis.bestMoveUci;
+    points.push({
+      id: "engine-best-move",
+      severity: "info",
+      text: `Engine prefers ${bestMove} at depth ${input.engineAnalysis.depth}.`,
+    });
+    points.push({
+      id: "engine-eval",
+      severity: input.engineAnalysis.evaluation.type === "mate" ? "critical" : "info",
+      text: describeEvaluation(input.engineAnalysis),
+    });
+  } else {
+    points.push({
+      id: "no-engine",
+      severity: "info",
+      text: "No engine analysis is saved for this position yet.",
+    });
+  }
+
+  if (input.tags?.length) {
+    points.push({
+      id: "tags",
+      severity: "warning",
+      text: `This position is tagged as ${formatList(input.tags)}.`,
+    });
+  }
+
+  if (input.card) {
+    const missed = input.card.attempts - input.card.correct;
+    points.push({
+      id: "card-history",
+      severity: missed > 0 ? "warning" : "positive",
+      text: `This card has been missed ${missed} times out of ${input.card.attempts} attempts.`,
+    });
+  }
+
+  return {
+    title: "Review summary",
+    points,
+    recommendation: buildDrillRecommendation(input),
+  };
+}
+
+function describeEvaluation(analysis) {
+  if (analysis.evaluation.type === "mate") {
+    return "The best move is a mate sequence.";
+  }
+
+  return `The engine evaluation is roughly ${formatEvaluation(analysis.evaluation)}.`;
+}
+
+function buildDrillRecommendation(input) {
+  const tagsForRecommendation = input.tags ?? [];
+  const lastAttempt = input.card?.attemptHistory.at(-1);
+  const attempts = input.card?.attempts ?? 0;
+  const correct = input.card?.correct ?? 0;
+  const missed = attempts - correct;
+
+  if (missed >= 3 || lastAttempt?.result === "missed") {
+    return "Keep this card in active review.";
+  }
+
+  if (tagsForRecommendation.includes("missed tactic")) {
+    return "Replay this card until you spot the tactic without revealing.";
+  }
+
+  if (tagsForRecommendation.includes("king safety")) {
+    return "Before moving, identify checks and threats against your king.";
+  }
+
+  if (tagsForRecommendation.includes("bad trade")) {
+    return "Compare material and pawn structure before accepting the trade.";
+  }
+
+  if (input.verdict === "blunder" || input.verdict === "mistake") {
+    return "Review the position slowly before moving on.";
+  }
+
+  return undefined;
+}
+
+function formatList(values) {
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
+}
+
 function getAttachConfirmation(target) {
   return target === "card" ? "Saved to card" : "Saved to move";
 }
@@ -524,6 +615,41 @@ assert.equal(formatAnalysisTimestamp("not-a-date"), "Unknown time");
 assert.equal(getStoredAnalysisLabel("current"), "Current unsaved engine result");
 assert.equal(getStoredAnalysisLabel("move"), "Saved move analysis");
 assert.equal(getStoredAnalysisLabel("card"), "Saved card analysis");
+const engineSummary = buildExplanationSummary({
+  moveSan: "Nc6",
+  verdict: "blunder",
+  tags: ["king safety", "plan mismatch"],
+  userNote: "I was focused on attack.",
+  engineAnalysis: engineResult,
+});
+assert.ok(
+  engineSummary.points.some((point) => point.text === "Engine prefers Nc6 at depth 10."),
+);
+assert.ok(
+  engineSummary.points.some(
+    (point) => point.text === "The engine evaluation is roughly +0.32.",
+  ),
+);
+assert.ok(
+  engineSummary.points.some(
+    (point) => point.text === "This position is tagged as king safety and plan mismatch.",
+  ),
+);
+const mateSummary = buildExplanationSummary({
+  engineAnalysis: {
+    ...engineResult,
+    evaluation: { type: "mate", value: 2 },
+  },
+});
+assert.ok(
+  mateSummary.points.some((point) => point.text === "The best move is a mate sequence."),
+);
+const missingEngineSummary = buildExplanationSummary({ verdict: "unclear" });
+assert.ok(
+  missingEngineSummary.points.some(
+    (point) => point.text === "No engine analysis is saved for this position yet.",
+  ),
+);
 assert.equal(getAttachConfirmation("move"), "Saved to move");
 assert.equal(getAttachConfirmation("card"), "Saved to card");
 assert.equal(isStaleAnalysis(engineResult, card.fenBefore), false);
@@ -754,6 +880,42 @@ const manualReviewed = appendAttempt(
 assert.equal(manualReviewed.attempts, 3);
 assert.equal(manualReviewed.correct, 1);
 assert.equal(manualReviewed.attemptHistory.at(-1).method, "manual-reveal");
+const repeatedMissSummary = buildExplanationSummary({
+  verdict: "mistake",
+  tags: ["missed tactic"],
+  engineAnalysis: engineResult,
+  card: {
+    ply: 4,
+    attempts: manualReviewed.attempts,
+    correct: manualReviewed.correct,
+    attemptHistory: manualReviewed.attemptHistory,
+  },
+});
+assert.equal(repeatedMissSummary.recommendation, "Keep this card in active review.");
+
+const tacticSummary = buildExplanationSummary({
+  verdict: "mistake",
+  tags: ["missed tactic"],
+  card: {
+    ply: 4,
+    attempts: 1,
+    correct: 1,
+    attemptHistory: [createAttempt(card, "remembered", "manual-reveal")],
+  },
+});
+assert.equal(
+  tacticSummary.recommendation,
+  "Replay this card until you spot the tactic without revealing.",
+);
+
+const tradeSummary = buildExplanationSummary({
+  verdict: "mistake",
+  tags: ["bad trade"],
+});
+assert.equal(
+  tradeSummary.recommendation,
+  "Compare material and pawn structure before accepting the trade.",
+);
 
 const freshMissedReviewed = appendAttempt(
   card,

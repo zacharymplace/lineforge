@@ -7,7 +7,9 @@ import {
   formatEvaluation,
   getStoredAnalysisLabel,
 } from "@/lib/engine/local-engine";
+import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
+import { ReviewSummary } from "./ReviewSummary";
 
 type DrillQueuePanelProps = {
   cards: MistakeCard[];
@@ -141,16 +143,34 @@ export function DrillQueuePanel({
                   </div>
                   <div className="text-stone-300">{selectedCard.note || "No note saved."}</div>
                   {selectedCard.engineAnalysis ? (
-                    <div>
-                      <div className="text-stone-500">{getStoredAnalysisLabel("card")}</div>
-                      <div className="font-mono text-amber-100">
-                        {selectedCard.engineAnalysis.bestMoveSan ??
-                          selectedCard.engineAnalysis.bestMoveUci}{" "}
-                        · {formatEvaluation(selectedCard.engineAnalysis.evaluation)}
+                    <div className="grid gap-3">
+                      <div>
+                        <div className="text-stone-500">{getStoredAnalysisLabel("card")}</div>
+                        <div className="font-mono text-amber-100">
+                          {selectedCard.engineAnalysis.bestMoveSan ??
+                            selectedCard.engineAnalysis.bestMoveUci}{" "}
+                          · {formatEvaluation(selectedCard.engineAnalysis.evaluation)}
+                        </div>
+                        <div className="text-xs text-stone-500">
+                          Analyzed {formatAnalysisTimestamp(selectedCard.engineAnalysis.analyzedAt)}
+                        </div>
                       </div>
-                      <div className="text-xs text-stone-500">
-                        Analyzed {formatAnalysisTimestamp(selectedCard.engineAnalysis.analyzedAt)}
-                      </div>
+                      <ReviewSummary
+                        heading="What to drill"
+                        summary={buildExplanationSummary({
+                          moveSan: selectedCard.moveSan,
+                          verdict: selectedCard.verdict,
+                          tags: selectedCard.tags,
+                          userNote: selectedCard.note,
+                          engineAnalysis: selectedCard.engineAnalysis,
+                          card: {
+                            ply: selectedCard.ply,
+                            attempts: selectedCard.attempts,
+                            correct: selectedCard.correct,
+                            attemptHistory: selectedCard.attemptHistory,
+                          },
+                        })}
+                      />
                     </div>
                   ) : null}
                 </div>

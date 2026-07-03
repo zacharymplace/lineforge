@@ -18,7 +18,9 @@ import type {
   EngineAnalysisResult,
   EngineStatus,
 } from "@/lib/engine/types";
+import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { MistakeCard } from "@/lib/move-ledger/types";
+import { ReviewSummary } from "./ReviewSummary";
 
 type AnalysisTarget = "active" | "annotation" | "drill";
 
@@ -252,6 +254,23 @@ export function EngineAnalysisPanel({
             label="Analyzed"
             value={formatAnalysisTimestamp(visibleResult.analyzedAt)}
           />
+          {result ? (
+            <ReviewSummary
+              summary={buildExplanationSummary({
+                moveSan: visibleResult.bestMoveSan,
+                engineAnalysis: visibleResult,
+                card:
+                  target === "drill" && selectedCard
+                    ? {
+                        ply: selectedCard.ply,
+                        attempts: selectedCard.attempts,
+                        correct: selectedCard.correct,
+                        attemptHistory: selectedCard.attemptHistory,
+                      }
+                    : undefined,
+              })}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
