@@ -1,5 +1,5 @@
 import type { EngineAnalysisResult } from "@/lib/engine/types";
-import type { DrillAttempt, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
+import type { MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
 
 export const COACH_LENS_IDS = [
   "blunder-audit",

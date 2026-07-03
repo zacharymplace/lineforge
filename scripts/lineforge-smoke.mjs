@@ -217,6 +217,144 @@ function clearAnalysis(value) {
   return rest;
 }
 
+const coachLensIds = [
+  "blunder-audit",
+  "tactics",
+  "king-safety",
+  "trade-check",
+  "opening-minimalist",
+  "plan-mismatch",
+];
+
+function buildCoachLensOutput(lensId, input) {
+  if (lensId === "tactics") return buildTacticsLens(input);
+  if (lensId === "king-safety") return buildKingSafetyLens(input);
+  if (lensId === "trade-check") return buildTradeCheckLens(input);
+  if (lensId === "opening-minimalist") return buildOpeningMinimalistLens(input);
+  if (lensId === "plan-mismatch") return buildPlanMismatchLens(input);
+  return buildBlunderAuditLens(input);
+}
+
+function buildBlunderAuditLens(input) {
+  const isBlunder = input.verdict === "blunder";
+  return lensOutput("blunder-audit", "Blunder Audit", input, {
+    summary: isBlunder
+      ? "This lens treats the position as a concrete error-checking exercise."
+      : "This lens gives the position a conservative safety review.",
+    point: isBlunder
+      ? "Because this is marked as a blunder, start with one-move safety: checks, captures, and direct threats."
+      : "Use this as a basic safety pass: check whether the move allowed an immediate tactic or hanging piece.",
+    action: "Replay the position and name checks, captures, threats, and loose pieces before choosing a move.",
+    confidence: isBlunder || input.engineAnalysis ? "high" : evidenceConfidence(input),
+  });
+}
+
+function buildTacticsLens(input) {
+  const tagged = input.tags?.includes("missed tactic");
+  return lensOutput("tactics", "Tactics Lens", input, {
+    summary: tagged
+      ? "This position is tagged for tactical review."
+      : "This lens can still structure calculation, but the tactical signal is limited.",
+    point: tagged
+      ? "The missed tactic tag supports reviewing candidate forcing moves first."
+      : "No tactic tag is saved, so treat this only as a candidate-move scan.",
+    action: tagged
+      ? "Replay the card until you can list forcing candidate moves without revealing."
+      : "List checks, captures, and threats once, then compare with the saved move.",
+    confidence: tagged ? "high" : evidenceConfidence(input),
+  });
+}
+
+function buildKingSafetyLens(input) {
+  const tagged = input.tags?.includes("king safety");
+  return lensOutput("king-safety", "King Safety Lens", input, {
+    summary: tagged
+      ? "This lens frames the position around threats to the king."
+      : "This lens asks whether king safety was relevant without assuming it was the main issue.",
+    point: tagged
+      ? "The king safety tag supports checking opponent checks and threats before anything else."
+      : "No king safety tag is saved, so keep this as a light king-exposure scan.",
+    action: "Before moving, name every legal check and one likely attacking threat for the opponent.",
+    confidence: tagged ? "high" : evidenceConfidence(input),
+  });
+}
+
+function buildTradeCheckLens(input) {
+  const tagged = input.tags?.includes("bad trade");
+  return lensOutput("trade-check", "Trade Check", input, {
+    summary: tagged
+      ? "This lens reviews whether an exchange changed the position in an unfavorable way."
+      : "This lens gives the move a conservative trade-quality pass.",
+    point: tagged
+      ? "The bad trade tag supports comparing material, activity, and pawn structure before accepting exchanges."
+      : "No bad trade tag is saved, so this is a general exchange-quality checklist.",
+    action: "For any trade, compare material count, piece activity, and pawn structure before committing.",
+    confidence: tagged ? "high" : evidenceConfidence(input),
+  });
+}
+
+function buildOpeningMinimalistLens(input) {
+  const tagged = input.tags?.includes("opening confusion");
+  return lensOutput("opening-minimalist", "Opening Minimalist", input, {
+    summary: tagged
+      ? "This lens turns opening confusion into a small plan reminder."
+      : "This lens keeps opening review narrow and practical.",
+    point: tagged
+      ? "Opening confusion appears early, so focus on the simple plan rather than memorizing long lines."
+      : "Use this lens only to extract one simple opening idea from the position.",
+    action: "Write one plan sentence for the opening position and one move that supports it.",
+    confidence: tagged || input.ply <= 16 ? "medium" : "low",
+  });
+}
+
+function buildPlanMismatchLens(input) {
+  const tagged = input.tags?.includes("plan mismatch");
+  return lensOutput("plan-mismatch", "Plan Mismatch Lens", input, {
+    summary: tagged
+      ? "This lens checks whether the move matched the plan you thought you were playing."
+      : "This lens compares available intention data without assuming a strategic mistake.",
+    point: tagged
+      ? "The saved note and plan mismatch tag support comparing what you intended with the recorded verdict."
+      : "There is limited intent data, so keep this to a light note/verdict comparison.",
+    action: "Before replaying, state the plan in one sentence and verify the move actually serves it.",
+    confidence: tagged && input.userNote ? "high" : evidenceConfidence(input),
+  });
+}
+
+function lensOutput(lensId, title, input, lens) {
+  const points = [];
+  if (input.moveSan) points.push({ id: "move", text: `Saved move: ${input.moveSan}.` });
+  if (input.verdict) points.push({ id: "verdict", text: `Saved verdict: ${input.verdict}.` });
+  if (input.tags?.length) points.push({ id: "tags", text: `Saved tags: ${input.tags.join(", ")}.` });
+  if (!points.length) points.push({ id: "limited-data", text: "Only limited review data is available for this position." });
+  points.push({ id: "lens", text: lens.point });
+  if (input.engineAnalysis) {
+    points.push({
+      id: "engine",
+      text: `Engine reference: ${input.engineAnalysis.bestMoveSan ?? input.engineAnalysis.bestMoveUci} at depth ${input.engineAnalysis.depth}, evaluation ${formatEvaluation(input.engineAnalysis.evaluation)}.`,
+    });
+  }
+  if (typeof input.attempts === "number") {
+    points.push({
+      id: "review-history",
+      text: `Review history: ${input.correct}/${input.attempts} remembered, ${input.attempts - input.correct} missed.`,
+    });
+  }
+  return {
+    lensId,
+    title,
+    summary: lens.summary,
+    points: points.slice(0, 5),
+    recommendedNextAction: lens.action,
+    confidence: lens.confidence,
+  };
+}
+
+function evidenceConfidence(input) {
+  if (input.engineAnalysis || input.tags?.length || input.verdict === "blunder") return "medium";
+  return input.userNote ? "medium" : "low";
+}
+
 function buildMoveReviewPacket(input) {
   const packetTags = input.annotation?.tags ?? [];
   const reviewSummary = buildExplanationSummary({
@@ -242,6 +380,7 @@ function buildMoveReviewPacket(input) {
     tags: packetTags,
     engineAnalysis: input.annotation?.engineAnalysis,
     reviewSummary,
+    coachLens: input.coachLens,
     drillRecommendation: reviewSummary.recommendation,
     createdAt: "2026-07-03T12:00:00.000Z",
   };
@@ -277,6 +416,7 @@ function buildCardReviewPacket(input) {
     tags: input.card.tags,
     engineAnalysis: input.card.engineAnalysis,
     reviewSummary,
+    coachLens: input.coachLens,
     drillRecommendation: reviewSummary.recommendation,
     reviewStats: {
       attempts: input.card.attempts,
@@ -326,6 +466,16 @@ function renderReviewPacketMarkdown(packet) {
     "",
     "## Review summary",
     ...packet.reviewSummary.points.map((point) => `- ${point.text}`),
+    "",
+    "## Coach lens",
+    ...(packet.coachLens
+      ? [
+          `${packet.coachLens.title} (${packet.coachLens.confidence} confidence)`,
+          packet.coachLens.summary,
+          ...packet.coachLens.points.map((point) => `- ${point.text}`),
+          `Next action: ${packet.coachLens.recommendedNextAction}`,
+        ]
+      : ["No coach lens selected for this packet."]),
     "",
     "## Drill recommendation",
     packet.drillRecommendation ?? "No drill recommendation available.",
@@ -752,6 +902,44 @@ assert.deepEqual(JSON.parse(JSON.stringify(engineResult)).evaluation, {
   type: "cp",
   value: 32,
 });
+const richLensInput = {
+  moveSan: "Nc6",
+  ply: 4,
+  verdict: "blunder",
+  tags: ["missed tactic", "king safety", "bad trade", "opening confusion", "plan mismatch"],
+  userNote: "I was focused on attack.",
+  engineAnalysis: engineResult,
+  attempts: 5,
+  correct: 2,
+  lastAttemptResult: "missed",
+};
+for (const lensId of coachLensIds) {
+  const output = buildCoachLensOutput(lensId, richLensInput);
+  assert.equal(output.lensId, lensId);
+  assert.ok(output.title.length > 0);
+  assert.ok(output.summary.length > 0);
+  assert.ok(output.points.length >= 2);
+  assert.ok(output.points.length <= 5);
+  assert.ok(output.recommendedNextAction.length > 0);
+  assert.ok(["low", "medium", "high"].includes(output.confidence));
+}
+assert.match(
+  buildCoachLensOutput("blunder-audit", richLensInput).points.map((point) => point.text).join(" "),
+  /one-move safety/i,
+);
+assert.match(
+  buildCoachLensOutput("tactics", richLensInput).recommendedNextAction,
+  /forcing candidate moves/i,
+);
+assert.match(
+  buildCoachLensOutput("king-safety", richLensInput).recommendedNextAction,
+  /check/i,
+);
+assert.match(
+  buildCoachLensOutput("trade-check", richLensInput).recommendedNextAction,
+  /material count/i,
+);
+assert.equal(buildCoachLensOutput("blunder-audit", {}).confidence, "low");
 assert.equal(formatEvaluation(engineResult.evaluation), "+0.32");
 assert.equal(formatEvaluation({ type: "cp", value: -48 }), "-0.48");
 assert.equal(formatEvaluation({ type: "mate", value: 3 }), "M3");
@@ -857,12 +1045,14 @@ const movePacket = buildMoveReviewPacket({
   fenAfter: game.moves[3].after,
   moveSan: game.moves[3].san,
   annotation: analyzedAnnotation,
+  coachLens: buildCoachLensOutput("tactics", richLensInput),
 });
 assert.equal(movePacket.lineforgeReviewPacketVersion, 1);
 assert.equal(movePacket.sourceType, "move");
 assert.equal(movePacket.sourceGameId, game.id);
 assert.equal(movePacket.ply, 4);
 assert.equal(movePacket.engineAnalysis.bestMoveSan, "Nc6");
+assert.equal(movePacket.coachLens.lensId, "tactics");
 assert.ok(
   movePacket.reviewSummary.points.some((point) => point.text === "Engine prefers Nc6 at depth 10."),
 );
@@ -871,6 +1061,7 @@ assert.equal(parsedMovePacket.lineforgeReviewPacketVersion, 1);
 const moveMarkdown = renderReviewPacketMarkdown(movePacket);
 assert.match(moveMarkdown, /LineForge Move Review Packet/);
 assert.match(moveMarkdown, /## Review summary/);
+assert.match(moveMarkdown, /## Coach lens/);
 assert.match(moveMarkdown, /Engine prefers Nc6 at depth 10/);
 assert.equal(getReviewPacketTitle(movePacket), "LineForge Move Review Packet Nc6, ply 4");
 assert.equal(
@@ -1090,6 +1281,11 @@ assert.equal(manualReviewed.attemptHistory.at(-1).method, "manual-reveal");
 const cardPacket = buildCardReviewPacket({
   sourceGameName: game.name,
   card: attachAnalysisToCard(manualReviewed, engineResult),
+  coachLens: buildCoachLensOutput("king-safety", {
+    ...richLensInput,
+    attempts: manualReviewed.attempts,
+    correct: manualReviewed.correct,
+  }),
 });
 assert.equal(cardPacket.lineforgeReviewPacketVersion, 1);
 assert.equal(cardPacket.sourceType, "card");
@@ -1099,6 +1295,7 @@ assert.equal(cardPacket.reviewStats.correct, 1);
 assert.equal(cardPacket.recentAttempts.length, 3);
 assert.equal(cardPacket.recentAttempts[0].method, "manual-reveal");
 assert.equal(cardPacket.drillRecommendation, "Keep this card in active review.");
+assert.equal(cardPacket.coachLens.lensId, "king-safety");
 const parsedCardPacket = JSON.parse(serializeReviewPacketJson(cardPacket));
 assert.equal(parsedCardPacket.reviewStats.attempts, 3);
 const cardMarkdown = renderReviewPacketMarkdown(cardPacket);

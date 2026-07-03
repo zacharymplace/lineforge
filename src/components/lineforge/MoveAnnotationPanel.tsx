@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
-import type { CoachLensId } from "@/lib/coach-lenses/types";
+import type { CoachLensId, CoachLensInput } from "@/lib/coach-lenses/types";
 import { MISTAKE_TAGS, MOVE_VERDICTS, type LineForgeGame } from "@/lib/move-ledger/types";
 import type { MistakeCard, MoveAnnotation, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
 import { emptyAnnotation, toggleTag } from "@/lib/move-ledger/annotations";
@@ -36,7 +36,7 @@ export function MoveAnnotationPanel({
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
-  const coachLensInput = {
+  const coachLensInput: CoachLensInput = {
     moveSan: move?.san,
     ply: move ? currentPly : undefined,
     fenBefore: move?.before,

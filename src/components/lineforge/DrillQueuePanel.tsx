@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
-import type { CoachLensId } from "@/lib/coach-lenses/types";
+import type { CoachLensId, CoachLensInput } from "@/lib/coach-lenses/types";
 import { getSuccessRate } from "@/lib/drill-queue/review";
 import {
   formatAnalysisTimestamp,
@@ -58,7 +58,7 @@ export function DrillQueuePanel({
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
-  const coachLensInput = selectedCard
+  const coachLensInput: CoachLensInput = selectedCard
     ? {
         moveSan: selectedCard.moveSan,
         ply: selectedCard.ply,
