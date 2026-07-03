@@ -37,6 +37,9 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket) {
     "## Review summary",
     ...packet.reviewSummary.points.map((point) => `- ${point.text}`),
     "",
+    "## Coach lens",
+    ...renderCoachLens(packet),
+    "",
     "## Drill recommendation",
     packet.drillRecommendation ?? "No drill recommendation available.",
     "",
@@ -102,6 +105,19 @@ export function getReviewPacketTitle(packet: ReviewPacket) {
   const ply = packet.ply ? `, ply ${packet.ply}` : "";
 
   return `LineForge ${source} Review Packet${move}${ply}`;
+}
+
+function renderCoachLens(packet: ReviewPacket) {
+  if (!packet.coachLens) {
+    return ["No coach lens selected for this packet."];
+  }
+
+  return [
+    `${packet.coachLens.title} (${packet.coachLens.confidence} confidence)`,
+    packet.coachLens.summary,
+    ...packet.coachLens.points.map((point) => `- ${point.text}`),
+    `Next action: ${packet.coachLens.recommendedNextAction}`,
+  ];
 }
 
 function renderEngineAnalysis(packet: ReviewPacket) {

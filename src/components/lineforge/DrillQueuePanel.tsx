@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
+import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
+import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { getSuccessRate } from "@/lib/drill-queue/review";
 import {
   formatAnalysisTimestamp,
@@ -12,6 +14,7 @@ import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 import { buildCardReviewPacket } from "@/lib/review-packets/build";
 import type { ReviewPacket } from "@/lib/review-packets/types";
+import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 
@@ -51,9 +54,25 @@ export function DrillQueuePanel({
   const lastAttempt = selectedAttempts.at(-1);
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
+  const coachLensInput = selectedCard
+    ? {
+        moveSan: selectedCard.moveSan,
+        ply: selectedCard.ply,
+        fenBefore: selectedCard.fenBefore,
+        fenAfter: selectedCard.fenAfter,
+        verdict: selectedCard.verdict,
+        tags: selectedCard.tags,
+        userNote: selectedCard.note,
+        engineAnalysis: selectedCard.engineAnalysis,
+        attempts: selectedCard.attempts,
+        correct: selectedCard.correct,
+        lastAttemptResult: lastAttempt?.result,
+      }
+    : {};
 
   function handlePreviewPacket() {
     if (!selectedCard) {
@@ -65,6 +84,7 @@ export function DrillQueuePanel({
         buildCardReviewPacket({
           sourceGameName: selectedCardGameName,
           card: selectedCard,
+          coachLens: buildCoachLensOutput(selectedLensId, coachLensInput),
         }),
       );
       setExportError(null);
@@ -139,6 +159,11 @@ export function DrillQueuePanel({
                 {exportError}
               </div>
             ) : null}
+            <CoachLensPanel
+              input={coachLensInput}
+              selectedLensId={selectedLensId}
+              onSelectLens={setSelectedLensId}
+            />
             <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
               <Chessboard
                 options={{

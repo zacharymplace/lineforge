@@ -1,4 +1,5 @@
 import type { EngineAnalysisResult } from "@/lib/engine/types";
+import type { CoachLensOutput } from "@/lib/coach-lenses/types";
 import type { ExplanationSummary } from "@/lib/explanations/types";
 import type {
   DrillAttempt,
@@ -33,6 +34,7 @@ export type ReviewPacket = {
   tags: MistakeTag[];
   engineAnalysis?: EngineAnalysisResult;
   reviewSummary: ExplanationSummary;
+  coachLens?: CoachLensOutput;
   drillRecommendation?: string;
   reviewStats?: ReviewPacketStats;
   recentAttempts?: DrillAttempt[];
@@ -47,9 +49,11 @@ export type MoveReviewPacketInput = {
   fenAfter?: string;
   moveSan?: string;
   annotation?: MoveAnnotation;
+  coachLens?: CoachLensOutput;
 };
 
 export type CardReviewPacketInput = {
   sourceGameName?: string;
   card: MistakeCard;
+  coachLens?: CoachLensOutput;
 };

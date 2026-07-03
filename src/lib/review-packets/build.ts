@@ -32,6 +32,7 @@ export function buildMoveReviewPacket(input: MoveReviewPacketInput): ReviewPacke
     tags,
     engineAnalysis: input.annotation?.engineAnalysis,
     reviewSummary,
+    coachLens: input.coachLens,
     drillRecommendation: reviewSummary.recommendation,
     createdAt: new Date().toISOString(),
   };
@@ -67,6 +68,7 @@ export function buildCardReviewPacket(input: CardReviewPacketInput): ReviewPacke
     tags: input.card.tags,
     engineAnalysis: input.card.engineAnalysis,
     reviewSummary,
+    coachLens: input.coachLens,
     drillRecommendation: reviewSummary.recommendation,
     reviewStats: {
       attempts: input.card.attempts,

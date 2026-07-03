@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DEFAULT_COACH_LENS_ID, buildCoachLensOutput } from "@/lib/coach-lenses/lenses";
+import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { MISTAKE_TAGS, MOVE_VERDICTS, type LineForgeGame } from "@/lib/move-ledger/types";
 import type { MistakeCard, MoveAnnotation, MistakeTag, MoveVerdict } from "@/lib/move-ledger/types";
 import { emptyAnnotation, toggleTag } from "@/lib/move-ledger/annotations";
@@ -12,6 +14,7 @@ import {
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import { buildMoveReviewPacket } from "@/lib/review-packets/build";
 import type { ReviewPacket } from "@/lib/review-packets/types";
+import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 
@@ -32,6 +35,17 @@ export function MoveAnnotationPanel({
   const annotation = game.annotations[currentPly] ?? emptyAnnotation(currentPly);
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
+  const coachLensInput = {
+    moveSan: move?.san,
+    ply: move ? currentPly : undefined,
+    fenBefore: move?.before,
+    fenAfter: move?.after,
+    verdict: move ? annotation.verdict : undefined,
+    tags: move ? annotation.tags : [],
+    userNote: move ? annotation.thought : undefined,
+    engineAnalysis: annotation.engineAnalysis,
+  };
 
   function updateAnnotation(update: Partial<MoveAnnotation>) {
     onSaveAnnotation({
@@ -57,6 +71,7 @@ export function MoveAnnotationPanel({
           fenAfter: move.after,
           moveSan: move.san,
           annotation,
+          coachLens: buildCoachLensOutput(selectedLensId, coachLensInput),
         }),
       );
       setExportError(null);
@@ -131,6 +146,14 @@ export function MoveAnnotationPanel({
         <div className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100">
           {exportError}
         </div>
+      ) : null}
+
+      {move ? (
+        <CoachLensPanel
+          input={coachLensInput}
+          selectedLensId={selectedLensId}
+          onSelectLens={setSelectedLensId}
+        />
       ) : null}
 
       {annotation.engineAnalysis ? (
