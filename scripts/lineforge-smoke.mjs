@@ -915,6 +915,17 @@ function saveOpeningWeaknessFilterPreference(filter, storage) {
   return normalized;
 }
 
+function createTransientMessageState(message, currentState) {
+  return {
+    message,
+    token: (currentState?.token ?? 0) + 1,
+  };
+}
+
+function clearTransientMessageState(state, token) {
+  return state.token === token ? { message: null, token } : state;
+}
+
 function isOpeningPhaseCard(card, maxPly = openingPhaseMaxPly) {
   return card.ply <= maxPly;
 }
@@ -2326,6 +2337,12 @@ assert.deepEqual(
   JSON.parse(savedOpeningFilterStorage.getItem(openingWeaknessFilterPreferenceKey)),
   getDefaultOpeningWeaknessFilter(),
 );
+const savedHintState = createTransientMessageState("Filters saved locally");
+assert.deepEqual(savedHintState, { message: "Filters saved locally", token: 1 });
+const resetHintState = createTransientMessageState("Filters saved locally", savedHintState);
+assert.deepEqual(resetHintState, { message: "Filters saved locally", token: 2 });
+assert.deepEqual(clearTransientMessageState(resetHintState, 1), resetHintState);
+assert.deepEqual(clearTransientMessageState(resetHintState, 2), { message: null, token: 2 });
 const missedTacticBucket = openingMap.buckets.find((bucket) => bucket.id === "missed-tactic");
 const openingBucketSession = buildOpeningWeaknessReviewSession(openingCards, {
   ...missedTacticBucket,

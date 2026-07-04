@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   buildFilteredOpeningWeaknessMap,
   buildOpeningWeaknessReviewCardIds,
@@ -23,6 +23,11 @@ import {
   type MistakeTag,
   type MoveVerdict,
 } from "@/lib/move-ledger/types";
+import {
+  clearTransientMessageState,
+  createTransientMessageState,
+  type TransientMessageState,
+} from "@/lib/ui/transient-message";
 
 type OpeningWeaknessMapPanelProps = {
   openingMap: OpeningWeaknessMap;
@@ -41,6 +46,11 @@ export function OpeningWeaknessMapPanel({
   const [filterPreference, setFilterPreference] = useState<OpeningWeaknessFilterPreference>(() =>
     loadOpeningWeaknessFilterPreference(),
   );
+  const [savedMessage, setSavedMessage] = useState<TransientMessageState>({
+    message: null,
+    token: 0,
+  });
+  const savedMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filter: OpeningWeaknessFilter = useMemo(
     () => ({
       ...filterPreference,
@@ -72,12 +82,32 @@ export function OpeningWeaknessMapPanel({
         ...nextFilter,
       }),
     );
+    showSavedMessage();
   }
 
   function resetFilters() {
     const defaultFilter = getDefaultOpeningWeaknessFilter();
     setFilterPreference(saveOpeningWeaknessFilterPreference(defaultFilter));
     setSelectedBucketId(null);
+    showSavedMessage();
+  }
+
+  function showSavedMessage() {
+    setSavedMessage((currentMessage) => {
+      const nextMessage = createTransientMessageState("Filters saved locally", currentMessage);
+
+      if (savedMessageTimeoutRef.current) {
+        clearTimeout(savedMessageTimeoutRef.current);
+      }
+
+      savedMessageTimeoutRef.current = setTimeout(() => {
+        setSavedMessage((messageState) =>
+          clearTransientMessageState(messageState, nextMessage.token),
+        );
+      }, 2200);
+
+      return nextMessage;
+    });
   }
 
   return (
@@ -188,6 +218,9 @@ export function OpeningWeaknessMapPanel({
           filters: {filterSummary.activeFilterLabels.join(", ")} · top visible bucket:{" "}
           {filterSummary.topVisibleBucket?.label ?? "none"}
         </div>
+        {savedMessage.message ? (
+          <div className="text-xs text-emerald-300">{savedMessage.message}</div>
+        ) : null}
       </div>
 
       {filteredMap.buckets.length === 0 ? (
