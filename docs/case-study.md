@@ -103,6 +103,8 @@ Recommended screenshots for a public portfolio page:
 - Weaknesses / opening map + trends: buckets, filters, and trend summary.
 - Data / backup + review packets: packet preview modal and local export controls.
 
+Use [`demo-walkthrough.md`](demo-walkthrough.md) to produce these screenshots from the built-in demo game.
+
 ## Roadmap
 
 Near-term public-facing work should focus on presentation and verification:

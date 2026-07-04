@@ -199,7 +199,7 @@ Recommended screenshots for a portfolio page or case study:
 - Weaknesses / opening map + trends: opening weakness buckets, filters, trend rows, and recommended focus.
 - Data / backup + review packets: review packet preview modal, Markdown/JSON export, and local backup controls.
 
-No screenshots are checked into this repo yet. See [`docs/case-study.md`](docs/case-study.md) for a portfolio-ready narrative.
+No screenshots are checked into this repo yet. See [`docs/case-study.md`](docs/case-study.md) for a portfolio-ready narrative and [`docs/demo-walkthrough.md`](docs/demo-walkthrough.md) for the manual sample-data walkthrough.
 
 ## Local Development
 
