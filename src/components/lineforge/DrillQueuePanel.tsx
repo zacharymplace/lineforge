@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import {
   DEFAULT_COACH_LENS_ID,
@@ -23,7 +23,14 @@ import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 import { ScheduleBadge } from "./ScheduleBadge";
-import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
+import {
+  REVIEW_SCHEDULE_FILTERS,
+  filterCardsByScheduleStatus,
+  getScheduleFilterLabel,
+  getVisibleScheduleSelectedCardId,
+  type ReviewScheduleFilter,
+  type ReviewScheduleSummary,
+} from "@/lib/drill-queue/schedule";
 
 type DrillQueuePanelProps = {
   cards: MistakeCard[];
@@ -62,7 +69,15 @@ export function DrillQueuePanel({
   onAttemptMove,
   attemptResult,
 }: DrillQueuePanelProps) {
-  const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
+  const [scheduleFilter, setScheduleFilter] = useState<ReviewScheduleFilter>("all");
+  const visibleCards = useMemo(
+    () => filterCardsByScheduleStatus(cards, reviewSchedule, scheduleFilter),
+    [cards, reviewSchedule, scheduleFilter],
+  );
+  const visibleSelectedCardId = getVisibleScheduleSelectedCardId(visibleCards, selectedCardId);
+  const selectedCard = visibleSelectedCardId
+    ? cards.find((card) => card.id === visibleSelectedCardId) ?? null
+    : null;
   const scheduleItemsByCardId = new Map(
     reviewSchedule?.items.map((item) => [item.cardId, item]) ?? [],
   );
@@ -91,6 +106,12 @@ export function DrillQueuePanel({
         lastAttemptResult: lastAttempt?.result,
       }
     : {};
+
+  useEffect(() => {
+    if (visibleSelectedCardId && visibleSelectedCardId !== selectedCardId) {
+      onSelectCard(visibleSelectedCardId);
+    }
+  }, [onSelectCard, selectedCardId, visibleSelectedCardId]);
 
   function handlePreviewPacket() {
     if (!selectedCard) {
@@ -125,11 +146,33 @@ export function DrillQueuePanel({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(180px,240px)_1fr]">
-        <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
+        <div className="grid content-start gap-2">
+          <label className="grid gap-1 text-sm">
+            <span className="text-stone-500">Schedule filter</span>
+            <select
+              className="lf-field"
+              value={scheduleFilter}
+              onChange={(event) => setScheduleFilter(event.target.value as ReviewScheduleFilter)}
+            >
+              {REVIEW_SCHEDULE_FILTERS.map((filter) => (
+                <option key={filter} value={filter}>
+                  {getScheduleFilterLabel(filter)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="text-xs text-stone-500">
+            {getScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
+          </div>
+          <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
           {cards.length === 0 ? (
             <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
+          ) : visibleCards.length === 0 ? (
+            <div className="p-3 text-sm text-stone-500">
+              No cards match the {getScheduleFilterLabel(scheduleFilter).toLowerCase()} filter.
+            </div>
           ) : (
-            cards.map((card) => (
+            visibleCards.map((card) => (
               <button
                 key={card.id}
                 className={`grid w-full gap-1 border-b border-stone-800 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-stone-900 ${
@@ -147,6 +190,7 @@ export function DrillQueuePanel({
               </button>
             ))
           )}
+          </div>
         </div>
 
         {selectedCard ? (

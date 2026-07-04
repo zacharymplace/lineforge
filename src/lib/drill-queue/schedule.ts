@@ -9,6 +9,17 @@ import type { OpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-ma
 
 export type ReviewScheduleStatus = "due-now" | "due-soon" | "stable" | "new";
 
+export const REVIEW_SCHEDULE_FILTERS = [
+  "all",
+  "due-now",
+  "due-soon",
+  "new",
+  "stable",
+  "high-priority",
+] as const;
+
+export type ReviewScheduleFilter = (typeof REVIEW_SCHEDULE_FILTERS)[number];
+
 export type ReviewScheduleRule = {
   id:
     | "never-reviewed"
@@ -130,6 +141,54 @@ export function formatReviewScheduleLastReviewed(item: Pick<ReviewScheduleItem, 
 
   const date = new Date(item.lastReviewedAt);
   return Number.isNaN(date.getTime()) ? "Last reviewed unknown" : `Last ${date.toLocaleDateString()}`;
+}
+
+export function getScheduleFilterLabel(filter: ReviewScheduleFilter) {
+  if (filter === "all") return "All cards";
+  if (filter === "due-now") return "Due now";
+  if (filter === "due-soon") return "Due soon";
+  if (filter === "new") return "New";
+  if (filter === "stable") return "Stable";
+  return "High priority";
+}
+
+export function matchesScheduleFilter(
+  item: ReviewScheduleItem | undefined,
+  filter: ReviewScheduleFilter,
+) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (!item) {
+    return false;
+  }
+
+  if (filter === "high-priority") {
+    return getReviewSchedulePriorityLabel(item) === "High priority";
+  }
+
+  return item.status === filter;
+}
+
+export function filterCardsByScheduleStatus(
+  cards: MistakeCard[],
+  schedule: ReviewScheduleSummary | undefined,
+  filter: ReviewScheduleFilter,
+) {
+  const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
+  return cards.filter((card) => matchesScheduleFilter(scheduleItemsByCardId.get(card.id), filter));
+}
+
+export function getVisibleScheduleSelectedCardId(
+  visibleCards: Pick<MistakeCard, "id">[],
+  selectedCardId: string | null,
+) {
+  if (selectedCardId && visibleCards.some((card) => card.id === selectedCardId)) {
+    return selectedCardId;
+  }
+
+  return visibleCards[0]?.id ?? null;
 }
 
 function buildReviewScheduleItem(

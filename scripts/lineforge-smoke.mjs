@@ -1277,6 +1277,37 @@ function formatReviewScheduleLastReviewed(item) {
   return Number.isNaN(date.getTime()) ? "Last reviewed unknown" : `Last ${date.toLocaleDateString()}`;
 }
 
+function getScheduleFilterLabel(filter) {
+  if (filter === "all") return "All cards";
+  if (filter === "due-now") return "Due now";
+  if (filter === "due-soon") return "Due soon";
+  if (filter === "new") return "New";
+  if (filter === "stable") return "Stable";
+  return "High priority";
+}
+
+function matchesScheduleFilter(item, filter) {
+  if (filter === "all") return true;
+  if (!item) return false;
+  if (filter === "high-priority") return getReviewSchedulePriorityLabel(item) === "High priority";
+  return item.status === filter;
+}
+
+function filterCardsByScheduleStatus(cards, schedule, filter) {
+  const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
+  return cards.filter((currentCard) =>
+    matchesScheduleFilter(scheduleItemsByCardId.get(currentCard.id), filter),
+  );
+}
+
+function getVisibleScheduleSelectedCardId(visibleCards, selectedCardId) {
+  if (selectedCardId && visibleCards.some((currentCard) => currentCard.id === selectedCardId)) {
+    return selectedCardId;
+  }
+
+  return visibleCards[0]?.id ?? null;
+}
+
 function buildDueReviewSession(cards, schedule) {
   return buildReviewSession(
     [...new Set(schedule.dueReviewCardIds)]
@@ -2931,6 +2962,37 @@ assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-missed-card"
 assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-skipped-card"]), "Review after skipped session");
 assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-new-card"]), "Start first review");
 assert.equal(formatReviewScheduleLastReviewed(scheduleItemById["schedule-new-card"]), "Never reviewed");
+assert.equal(getScheduleFilterLabel("due-now"), "Due now");
+assert.deepEqual(
+  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-now").map((currentCard) => currentCard.id),
+  ["schedule-missed-card"],
+);
+assert.deepEqual(
+  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-soon").map((currentCard) => currentCard.id),
+  ["schedule-low-rate-card", "schedule-skipped-card"],
+);
+assert.deepEqual(
+  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "new").map((currentCard) => currentCard.id),
+  ["schedule-new-card"],
+);
+assert.deepEqual(
+  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "stable").map((currentCard) => currentCard.id),
+  ["schedule-stable-card"],
+);
+assert.deepEqual(
+  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "high-priority").map((currentCard) => currentCard.id),
+  ["schedule-missed-card"],
+);
+assert.equal(filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "all").length, scheduleCards.length);
+assert.deepEqual(filterCardsByScheduleStatus([scheduleCards[2]], undefined, "due-now"), []);
+assert.equal(
+  getVisibleScheduleSelectedCardId(
+    filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-now"),
+    "schedule-stable-card",
+  ),
+  "schedule-missed-card",
+);
+assert.equal(getVisibleScheduleSelectedCardId([], "schedule-stable-card"), null);
 const newOnlySchedule = buildReviewSchedule([scheduleCards[0]], [], undefined, scheduleNow);
 assert.deepEqual(newOnlySchedule.dueReviewCardIds, ["schedule-new-card"]);
 const emptySchedule = buildReviewSchedule([], [], undefined, scheduleNow);
