@@ -8,6 +8,10 @@ import {
   buildCoachLensOutput,
 } from "@/lib/coach-lenses/lenses";
 import type { CoachLensId, CoachLensInput } from "@/lib/coach-lenses/types";
+import {
+  loadDrillQueueScheduleFilterPreference,
+  saveDrillQueueScheduleFilterPreference,
+} from "@/lib/drill-queue/filter-preferences";
 import { getSuccessRate } from "@/lib/drill-queue/review";
 import {
   formatAnalysisTimestamp,
@@ -69,7 +73,9 @@ export function DrillQueuePanel({
   onAttemptMove,
   attemptResult,
 }: DrillQueuePanelProps) {
-  const [scheduleFilter, setScheduleFilter] = useState<ReviewScheduleFilter>("all");
+  const [scheduleFilter, setScheduleFilter] = useState<ReviewScheduleFilter>(() =>
+    loadDrillQueueScheduleFilterPreference(),
+  );
   const visibleCards = useMemo(
     () => filterCardsByScheduleStatus(cards, reviewSchedule, scheduleFilter),
     [cards, reviewSchedule, scheduleFilter],
@@ -152,7 +158,11 @@ export function DrillQueuePanel({
             <select
               className="lf-field"
               value={scheduleFilter}
-              onChange={(event) => setScheduleFilter(event.target.value as ReviewScheduleFilter)}
+              onChange={(event) =>
+                setScheduleFilter(
+                  saveDrillQueueScheduleFilterPreference(event.target.value),
+                )
+              }
             >
               {REVIEW_SCHEDULE_FILTERS.map((filter) => (
                 <option key={filter} value={filter}>

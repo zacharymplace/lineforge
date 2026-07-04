@@ -1308,6 +1308,29 @@ function getVisibleScheduleSelectedCardId(visibleCards, selectedCardId) {
   return visibleCards[0]?.id ?? null;
 }
 
+const drillQueueScheduleFilters = ["all", "due-now", "due-soon", "new", "stable", "high-priority"];
+const drillQueueScheduleFilterPreferenceKey = "lineforge.drillQueue.scheduleFilter.v1";
+
+function isValidDrillQueueScheduleFilter(value) {
+  return drillQueueScheduleFilters.includes(value);
+}
+
+function normalizeDrillQueueScheduleFilter(value) {
+  return isValidDrillQueueScheduleFilter(value) ? value : "all";
+}
+
+function loadDrillQueueScheduleFilterPreference(storage) {
+  return normalizeDrillQueueScheduleFilter(
+    storage?.getItem(drillQueueScheduleFilterPreferenceKey),
+  );
+}
+
+function saveDrillQueueScheduleFilterPreference(filter, storage) {
+  const normalized = normalizeDrillQueueScheduleFilter(filter);
+  storage?.setItem(drillQueueScheduleFilterPreferenceKey, normalized);
+  return normalized;
+}
+
 function buildDueReviewSession(cards, schedule) {
   return buildReviewSession(
     [...new Set(schedule.dueReviewCardIds)]
@@ -2963,6 +2986,33 @@ assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-skipped-card
 assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-new-card"]), "Start first review");
 assert.equal(formatReviewScheduleLastReviewed(scheduleItemById["schedule-new-card"]), "Never reviewed");
 assert.equal(getScheduleFilterLabel("due-now"), "Due now");
+const validDrillQueueFilterStorage = createMemoryStorage({
+  [drillQueueScheduleFilterPreferenceKey]: "due-soon",
+});
+assert.equal(loadDrillQueueScheduleFilterPreference(validDrillQueueFilterStorage), "due-soon");
+const allDrillQueueFilterStorage = createMemoryStorage({
+  [drillQueueScheduleFilterPreferenceKey]: "all",
+});
+assert.equal(loadDrillQueueScheduleFilterPreference(allDrillQueueFilterStorage), "all");
+const invalidDrillQueueFilterStorage = createMemoryStorage({
+  [drillQueueScheduleFilterPreferenceKey]: "not-a-filter",
+});
+assert.equal(loadDrillQueueScheduleFilterPreference(invalidDrillQueueFilterStorage), "all");
+const malformedDrillQueueFilterStorage = createMemoryStorage({
+  [drillQueueScheduleFilterPreferenceKey]: "{ nope",
+});
+assert.equal(loadDrillQueueScheduleFilterPreference(malformedDrillQueueFilterStorage), "all");
+const missingDrillQueueFilterStorage = createMemoryStorage();
+assert.equal(loadDrillQueueScheduleFilterPreference(missingDrillQueueFilterStorage), "all");
+assert.equal(
+  saveDrillQueueScheduleFilterPreference("high-priority", missingDrillQueueFilterStorage),
+  "high-priority",
+);
+assert.equal(
+  missingDrillQueueFilterStorage.getItem(drillQueueScheduleFilterPreferenceKey),
+  "high-priority",
+);
+assert.equal(saveDrillQueueScheduleFilterPreference("bad", missingDrillQueueFilterStorage), "all");
 assert.deepEqual(
   filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-now").map((currentCard) => currentCard.id),
   ["schedule-missed-card"],
