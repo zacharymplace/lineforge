@@ -25,8 +25,8 @@ export function ChessBoardPanel({
   const currentMove = currentPly > 0 ? game.moves[currentPly - 1] : null;
 
   return (
-    <section className="grid gap-4">
-      <div className="overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-2 shadow-2xl shadow-black/40">
+    <section className="grid min-w-0 gap-3 sm:gap-4">
+      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-1.5 shadow-2xl shadow-black/40 sm:p-2">
         <Chessboard
           options={{
             id: "lineforge-board",
@@ -41,8 +41,8 @@ export function ChessBoardPanel({
         />
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <button className="lf-button" onClick={() => onGoToPly(0)}>
             Start
           </button>

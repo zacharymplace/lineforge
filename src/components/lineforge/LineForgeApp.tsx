@@ -497,11 +497,11 @@ export function LineForgeApp() {
 
   return (
     <main className="min-h-screen bg-[#11110f] text-stone-100">
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="grid gap-2 border-b border-stone-800 pb-5">
+      <div className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+        <header className="grid gap-2 border-b border-stone-800 pb-4 sm:pb-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-semibold tracking-normal text-amber-100">
+              <h1 className="text-2xl font-semibold tracking-normal text-amber-100 sm:text-3xl">
                 LineForge
               </h1>
               <p className="max-w-3xl text-sm text-stone-400">
@@ -509,7 +509,7 @@ export function LineForgeApp() {
                 saving mistake cards, and reviewing recurring weaknesses.
               </p>
             </div>
-            <div className="rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
+            <div className="max-w-full rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
               Local-first · no accounts · optional local engine · {game.name}
             </div>
           </div>
@@ -539,32 +539,36 @@ export function LineForgeApp() {
               </span>
             ))}
           </div>
-          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="LineForge workflows">
+          <nav
+            className="-mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0"
+            aria-label="LineForge workflows"
+          >
             {WORKFLOW_SECTIONS.map((section) => {
               const isActive = activeWorkflow === section.id;
 
               return (
                 <button
                   key={section.id}
-                  className={`min-w-fit rounded-md border px-3 py-2 text-left text-sm transition ${
+                  className={`min-h-11 min-w-24 shrink-0 rounded-md border px-3 py-2 text-left text-sm transition sm:min-w-32 ${
                     isActive
                       ? "border-amber-700 bg-amber-950/50 text-amber-100"
                       : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700 hover:text-stone-100"
                   }`}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
+                  aria-pressed={isActive}
                   aria-label={`${section.label}: ${section.description}`}
                   onClick={() => setActiveWorkflow(section.id)}
                 >
                   <span className="block font-medium">{section.label}</span>
-                  <span className="block text-xs text-stone-500">{section.description}</span>
+                  <span className="hidden text-xs text-stone-500 sm:block">{section.description}</span>
                 </button>
               );
             })}
           </nav>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(340px,520px)_minmax(0,1fr)] xl:items-start">
+        <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(340px,520px)_minmax(0,1fr)] xl:items-start">
           <div className="xl:sticky xl:top-4">
             <ChessBoardPanel
               fen={replayChess.fen()}
@@ -623,7 +627,7 @@ export function LineForgeApp() {
                 onSaveAnnotation={handleSaveAnnotation}
                 onCreateCard={handleCreateCard}
               />
-              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
                 <summary className="cursor-pointer text-sm font-medium text-stone-100">
                   Optional local engine analysis
                 </summary>
@@ -698,14 +702,14 @@ export function LineForgeApp() {
               aria-labelledby="lineforge-workflow-data"
             >
               <WorkflowHeading sectionId="data" />
-              <section className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+              <section className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
                 <h2 className="text-lg font-semibold text-stone-100">Local data</h2>
                 <p className="mt-1 text-sm text-stone-500">
                   LineForge stores study data in this browser, exports local JSON backups,
                   and does not use accounts, cloud sync, or external services.
                 </p>
               </section>
-              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
                 <summary className="cursor-pointer text-sm font-medium text-stone-100">
                   Backup and JSON export tools
                 </summary>
@@ -729,8 +733,8 @@ function WorkflowHeading({ sectionId }: { sectionId: WorkflowSection }) {
   }
 
   return (
-    <div className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
-      <h2 id={`lineforge-workflow-${section.id}`} className="text-xl font-semibold text-stone-100">
+    <div className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
+      <h2 id={`lineforge-workflow-${section.id}`} className="text-lg font-semibold text-stone-100 sm:text-xl">
         {section.label}
       </h2>
       <p className="mt-1 text-sm text-stone-500">{section.description}</p>
