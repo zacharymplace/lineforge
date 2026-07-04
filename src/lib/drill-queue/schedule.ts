@@ -20,6 +20,16 @@ export const REVIEW_SCHEDULE_FILTERS = [
 
 export type ReviewScheduleFilter = (typeof REVIEW_SCHEDULE_FILTERS)[number];
 
+export const DRILL_QUEUE_SCHEDULE_FILTERS = [
+  "all",
+  "due-now",
+  "due-soon",
+  "stable",
+  "high-priority",
+] as const;
+
+export type DrillQueueScheduleFilter = (typeof DRILL_QUEUE_SCHEDULE_FILTERS)[number];
+
 export type ReviewScheduleRule = {
   id:
     | "never-reviewed"
@@ -150,6 +160,22 @@ export function getScheduleFilterLabel(filter: ReviewScheduleFilter) {
   if (filter === "new") return "New";
   if (filter === "stable") return "Stable";
   return "High priority";
+}
+
+export function getDrillQueueScheduleFilterLabel(filter: DrillQueueScheduleFilter) {
+  if (filter === "all") return "All";
+  if (filter === "due-now") return "Due";
+  if (filter === "due-soon") return "Upcoming";
+  if (filter === "stable") return "Later";
+  return "Blocked";
+}
+
+export function normalizeDrillQueueScheduleFilter(
+  filter: ReviewScheduleFilter,
+): DrillQueueScheduleFilter {
+  return DRILL_QUEUE_SCHEDULE_FILTERS.includes(filter as DrillQueueScheduleFilter)
+    ? (filter as DrillQueueScheduleFilter)
+    : "all";
 }
 
 export function matchesScheduleFilter(

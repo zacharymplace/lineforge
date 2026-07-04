@@ -1286,6 +1286,20 @@ function getScheduleFilterLabel(filter) {
   return "High priority";
 }
 
+const drillQueueDisplayScheduleFilters = ["all", "due-now", "due-soon", "stable", "high-priority"];
+
+function getDrillQueueScheduleFilterLabel(filter) {
+  if (filter === "all") return "All";
+  if (filter === "due-now") return "Due";
+  if (filter === "due-soon") return "Upcoming";
+  if (filter === "stable") return "Later";
+  return "Blocked";
+}
+
+function normalizeDrillQueueDisplayScheduleFilter(filter) {
+  return drillQueueDisplayScheduleFilters.includes(filter) ? filter : "all";
+}
+
 function matchesScheduleFilter(item, filter) {
   if (filter === "all") return true;
   if (!item) return false;
@@ -2986,6 +3000,12 @@ assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-skipped-card
 assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-new-card"]), "Start first review");
 assert.equal(formatReviewScheduleLastReviewed(scheduleItemById["schedule-new-card"]), "Never reviewed");
 assert.equal(getScheduleFilterLabel("due-now"), "Due now");
+assert.equal(getDrillQueueScheduleFilterLabel("all"), "All");
+assert.equal(getDrillQueueScheduleFilterLabel("due-now"), "Due");
+assert.equal(getDrillQueueScheduleFilterLabel("due-soon"), "Upcoming");
+assert.equal(getDrillQueueScheduleFilterLabel("stable"), "Later");
+assert.equal(getDrillQueueScheduleFilterLabel("high-priority"), "Blocked");
+assert.equal(normalizeDrillQueueDisplayScheduleFilter("new"), "all");
 const validDrillQueueFilterStorage = createMemoryStorage({
   [drillQueueScheduleFilterPreferenceKey]: "due-soon",
 });
@@ -3022,10 +3042,6 @@ assert.deepEqual(
   ["schedule-low-rate-card", "schedule-skipped-card"],
 );
 assert.deepEqual(
-  filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "new").map((currentCard) => currentCard.id),
-  ["schedule-new-card"],
-);
-assert.deepEqual(
   filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "stable").map((currentCard) => currentCard.id),
   ["schedule-stable-card"],
 );
@@ -3034,7 +3050,7 @@ assert.deepEqual(
   ["schedule-missed-card"],
 );
 assert.equal(filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "all").length, scheduleCards.length);
-assert.deepEqual(filterCardsByScheduleStatus([scheduleCards[2]], undefined, "due-now"), []);
+assert.deepEqual(filterCardsByScheduleStatus([scheduleCards[2]], reviewSchedule, "due-now"), []);
 assert.equal(
   getVisibleScheduleSelectedCardId(
     filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-now"),

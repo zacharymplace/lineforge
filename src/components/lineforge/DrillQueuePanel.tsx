@@ -34,11 +34,12 @@ import { ReviewSummary } from "./ReviewSummary";
 import { ScheduleBadge } from "./ScheduleBadge";
 import { StatusHint } from "./StatusHint";
 import {
-  REVIEW_SCHEDULE_FILTERS,
+  DRILL_QUEUE_SCHEDULE_FILTERS,
   filterCardsByScheduleStatus,
-  getScheduleFilterLabel,
+  getDrillQueueScheduleFilterLabel,
   getVisibleScheduleSelectedCardId,
-  type ReviewScheduleFilter,
+  normalizeDrillQueueScheduleFilter,
+  type DrillQueueScheduleFilter,
   type ReviewScheduleSummary,
 } from "@/lib/drill-queue/schedule";
 
@@ -79,8 +80,8 @@ export function DrillQueuePanel({
   onAttemptMove,
   attemptResult,
 }: DrillQueuePanelProps) {
-  const [scheduleFilter, setScheduleFilter] = useState<ReviewScheduleFilter>(() =>
-    loadDrillQueueScheduleFilterPreference(),
+  const [scheduleFilter, setScheduleFilter] = useState<DrillQueueScheduleFilter>(() =>
+    normalizeDrillQueueScheduleFilter(loadDrillQueueScheduleFilterPreference()),
   );
   const visibleCards = useMemo(
     () => filterCardsByScheduleStatus(cards, reviewSchedule, scheduleFilter),
@@ -156,7 +157,10 @@ export function DrillQueuePanel({
   }
 
   function handleScheduleFilterChange(value: string) {
-    setScheduleFilter(saveDrillQueueScheduleFilterPreference(value));
+    const nextFilter = normalizeDrillQueueScheduleFilter(
+      saveDrillQueueScheduleFilterPreference(value),
+    );
+    setScheduleFilter(nextFilter);
     showSavedMessage();
   }
 
@@ -194,15 +198,15 @@ export function DrillQueuePanel({
               value={scheduleFilter}
               onChange={(event) => handleScheduleFilterChange(event.target.value)}
             >
-              {REVIEW_SCHEDULE_FILTERS.map((filter) => (
+              {DRILL_QUEUE_SCHEDULE_FILTERS.map((filter) => (
                 <option key={filter} value={filter}>
-                  {getScheduleFilterLabel(filter)}
+                  {getDrillQueueScheduleFilterLabel(filter)}
                 </option>
               ))}
             </select>
           </label>
           <div className="text-xs text-stone-500">
-            {getScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
+            {getDrillQueueScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
           </div>
           <StatusHint message={savedMessage.message} />
           <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
@@ -210,7 +214,7 @@ export function DrillQueuePanel({
             <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
           ) : visibleCards.length === 0 ? (
             <div className="p-3 text-sm text-stone-500">
-              No cards match the {getScheduleFilterLabel(scheduleFilter).toLowerCase()} filter.
+              No cards match the {getDrillQueueScheduleFilterLabel(scheduleFilter).toLowerCase()} filter.
             </div>
           ) : (
             visibleCards.map((card) => (
