@@ -57,12 +57,14 @@ type ReviewSessionPanelProps = {
   reviewSchedule?: ReviewScheduleSummary;
   schedulePreferences: ReviewSchedulePreferences;
   onSchedulePresetChange: (preset: ReviewScheduleIntervalPreset) => void;
+  displayMode: "review" | "weaknesses";
   openingMap?: OpeningWeaknessMap;
   openingTrend?: OpeningWeaknessTrend;
   activeGameId?: string | null;
   onRecordCardReview: (cardId: string, result: ReviewResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
   onClearSessionHistory?: () => void;
+  onRequestReviewView?: () => void;
 };
 
 type FilterKind = Exclude<
@@ -77,12 +79,14 @@ export function ReviewSessionPanel({
   reviewSchedule,
   schedulePreferences,
   onSchedulePresetChange,
+  displayMode,
   openingMap,
   openingTrend,
   activeGameId,
   onRecordCardReview,
   onCompleteSession,
   onClearSessionHistory,
+  onRequestReviewView,
 }: ReviewSessionPanelProps) {
   const [filterKind, setFilterKind] = useState<FilterKind>("all");
   const [filterVerdict, setFilterVerdict] = useState<MoveVerdict>("mistake");
@@ -132,6 +136,7 @@ export function ReviewSessionPanel({
     );
     setSession(nextSession);
     setLastSummary(null);
+    onRequestReviewView?.();
   }
 
   function startOpeningTrendBucketSession(bucket: OpeningWeaknessTrendBucket) {
@@ -197,7 +202,8 @@ export function ReviewSessionPanel({
 
   return (
     <>
-      <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+      {displayMode === "review" ? (
+        <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
       <div>
         <h2 className="text-lg font-semibold text-stone-100">Review session</h2>
         <p className="text-sm text-stone-500">Drill a filtered queue of mistake cards.</p>
@@ -391,8 +397,9 @@ export function ReviewSessionPanel({
           }
         />
       ) : null}
-      </section>
-      {openingMap ? (
+        </section>
+      ) : null}
+      {displayMode === "weaknesses" && openingMap ? (
         <OpeningWeaknessMapPanel
           openingMap={openingMap}
           reviewSchedule={reviewSchedule}
@@ -401,13 +408,13 @@ export function ReviewSessionPanel({
           onStartCardIdsReview={(cardIds) => startOpeningWeaknessCardIdsSession(cardIds)}
         />
       ) : null}
-      {openingTrend ? (
+      {displayMode === "weaknesses" && openingTrend ? (
         <OpeningWeaknessTrendPanel
           trend={openingTrend}
           onStartBucketReview={startOpeningTrendBucketSession}
         />
       ) : null}
-      {reviewSchedule ? (
+      {displayMode === "review" && reviewSchedule ? (
         <ReviewSchedulePanel
           schedule={reviewSchedule}
           preferences={schedulePreferences}
@@ -415,12 +422,14 @@ export function ReviewSessionPanel({
           onStartDueReview={startDueReviewSession}
         />
       ) : null}
-      <ReviewSessionHistoryPanel
-        summaries={sessionSummaries}
-        cards={cards}
-        onReviewMissedAgain={startMissedOnlyRepeatSession}
-        onClearHistory={onClearSessionHistory ?? (() => undefined)}
-      />
+      {displayMode === "review" ? (
+        <ReviewSessionHistoryPanel
+          summaries={sessionSummaries}
+          cards={cards}
+          onReviewMissedAgain={startMissedOnlyRepeatSession}
+          onClearHistory={onClearSessionHistory ?? (() => undefined)}
+        />
+      ) : null}
     </>
   );
 }

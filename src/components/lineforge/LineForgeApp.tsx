@@ -79,6 +79,36 @@ import type {
   ReviewResult,
 } from "@/lib/move-ledger/types";
 
+const WORKFLOW_SECTIONS = [
+  {
+    id: "play",
+    label: "Play",
+    description: "Board, game library, and PGN import.",
+  },
+  {
+    id: "study",
+    label: "Study",
+    description: "Annotate moves and attach optional local analysis.",
+  },
+  {
+    id: "review",
+    label: "Review",
+    description: "Drill cards, sessions, schedule, and history.",
+  },
+  {
+    id: "weaknesses",
+    label: "Weaknesses",
+    description: "MistakeGraph dashboard, opening map, and trends.",
+  },
+  {
+    id: "data",
+    label: "Data",
+    description: "Backup/export and local data boundaries.",
+  },
+] as const;
+
+type WorkflowSection = (typeof WORKFLOW_SECTIONS)[number]["id"];
+
 export function LineForgeApp() {
   const [game, setGame] = useState<LineForgeGame>(() => createEmptyGame());
   const [library, setLibrary] = useState<MoveLedgerLibrary>(() => createEmptyLibrary());
@@ -94,6 +124,7 @@ export function LineForgeApp() {
   const [schedulePreferences, setSchedulePreferences] = useState<ReviewSchedulePreferences>(
     () => getDefaultReviewSchedulePreferences(),
   );
+  const [activeWorkflow, setActiveWorkflow] = useState<WorkflowSection>("play");
   const [storageMessages, setStorageMessages] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -479,7 +510,7 @@ export function LineForgeApp() {
               </p>
             </div>
             <div className="rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
-              Local-first · no accounts · no engine · {game.name}
+              Local-first · no accounts · optional local engine · {game.name}
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -508,103 +539,201 @@ export function LineForgeApp() {
               </span>
             ))}
           </div>
+          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="LineForge workflows">
+            {WORKFLOW_SECTIONS.map((section) => {
+              const isActive = activeWorkflow === section.id;
+
+              return (
+                <button
+                  key={section.id}
+                  className={`min-w-fit rounded-md border px-3 py-2 text-left text-sm transition ${
+                    isActive
+                      ? "border-amber-700 bg-amber-950/50 text-amber-100"
+                      : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700 hover:text-stone-100"
+                  }`}
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={`${section.label}: ${section.description}`}
+                  onClick={() => setActiveWorkflow(section.id)}
+                >
+                  <span className="block font-medium">{section.label}</span>
+                  <span className="block text-xs text-stone-500">{section.description}</span>
+                </button>
+              );
+            })}
+          </nav>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(360px,520px)_1fr]">
-          <ChessBoardPanel
-            fen={replayChess.fen()}
-            game={game}
-            currentPly={currentPly}
-            onDrop={handleDrop}
-            onGoToPly={goToPly}
-            onUndo={handleUndo}
-            onReset={handleReset}
-          />
-
-          <div className="grid gap-6">
-            <GameLibraryPanel
-              key={game.id}
-              activeGame={game}
-              library={library}
-              isDraftGame={isDraftGame}
-              hasUnsavedChanges={hasDirtyGame}
-              onSaveGame={handleSaveGame}
-              onRenameSavedGame={handleRenameSavedGame}
-              onUpdateDraftName={handleUpdateDraftName}
-              onReloadSavedGame={handleReloadSavedGame}
-              onLoadGame={handleLoadGame}
-              onDeleteGame={handleDeleteGame}
-            />
-            <GameImportPanel
-              game={game}
+        <div className="grid gap-6 xl:grid-cols-[minmax(340px,520px)_minmax(0,1fr)] xl:items-start">
+          <div className="xl:sticky xl:top-4">
+            <ChessBoardPanel
               fen={replayChess.fen()}
-              pgn={replayChess.pgn()}
-              hasUnsavedChanges={hasDirtyGame}
-              onPreviewPgn={handlePreviewPgn}
-              onConfirmImport={handleConfirmImport}
-              onCancelImport={handleCancelImport}
-              onGoToPly={goToPly}
-            />
-            <MoveAnnotationPanel
               game={game}
               currentPly={currentPly}
-              comparisonLensIds={comparisonLensIds}
-              onComparisonLensIdsChange={handleComparisonLensIdsChange}
-              onSaveAnnotation={handleSaveAnnotation}
-              onCreateCard={handleCreateCard}
-            />
-            <EngineAnalysisPanel
-              activeFen={replayChess.fen()}
-              canAttachToAnnotation={currentPly > 0}
-              currentAnnotationAnalysis={currentAnnotation?.engineAnalysis}
-              selectedCard={selectedCard}
-              onAttachToAnnotation={handleAttachAnalysisToAnnotation}
-              onAttachToCard={handleAttachAnalysisToCard}
+              onDrop={handleDrop}
+              onGoToPly={goToPly}
+              onUndo={handleUndo}
+              onReset={handleReset}
             />
           </div>
-        </div>
 
-        <MistakeDashboard
-          stats={stats}
-          sessionSummaries={sessionSummaries}
-          openingMap={openingMap}
-          openingTrend={openingTrend}
-          reviewSchedule={reviewSchedule}
-        />
-        <ReviewSessionPanel
-          cards={cards}
-          comparisonLensIds={comparisonLensIds}
-          sessionSummaries={sessionSummaries}
-          reviewSchedule={reviewSchedule}
-          schedulePreferences={schedulePreferences}
-          onSchedulePresetChange={handleSchedulePresetChange}
-          openingMap={openingMap}
-          openingTrend={openingTrend}
-          activeGameId={isDraftGame ? null : game.id}
-          onRecordCardReview={handleSessionCardReview}
-          onCompleteSession={handleCompleteSession}
-          onClearSessionHistory={handleClearSessionHistory}
-        />
-        <DrillQueuePanel
-          cards={cards}
-          activeGameId={game.id}
-          activeGameName={game.name}
-          sourceGameNames={sourceGameNames}
-          reviewSchedule={reviewSchedule}
-          comparisonLensIds={comparisonLensIds}
-          onComparisonLensIdsChange={handleComparisonLensIdsChange}
-          selectedCardId={selectedCard?.id ?? null}
-          revealed={selectedCard ? revealedCardId === selectedCard.id : false}
-          onSelectCard={handleSelectCard}
-          onReveal={() => selectedCard && setRevealedCardId(selectedCard.id)}
-          onReview={handleReview}
-          onAttemptMove={handleAttemptMove}
-          attemptResult={
-            selectedCard && revealedCardId === selectedCard.id ? attemptResult : null
-          }
-        />
-        <BackupPanel onExport={handleExportBackup} onImport={handleImportBackup} />
+          <section className="min-w-0" aria-label="Selected workflow">
+            <div
+              className="grid gap-4"
+              hidden={activeWorkflow !== "play"}
+              aria-labelledby="lineforge-workflow-play"
+            >
+              <WorkflowHeading sectionId="play" />
+              <GameLibraryPanel
+                key={game.id}
+                activeGame={game}
+                library={library}
+                isDraftGame={isDraftGame}
+                hasUnsavedChanges={hasDirtyGame}
+                onSaveGame={handleSaveGame}
+                onRenameSavedGame={handleRenameSavedGame}
+                onUpdateDraftName={handleUpdateDraftName}
+                onReloadSavedGame={handleReloadSavedGame}
+                onLoadGame={handleLoadGame}
+                onDeleteGame={handleDeleteGame}
+              />
+              <GameImportPanel
+                game={game}
+                fen={replayChess.fen()}
+                pgn={replayChess.pgn()}
+                hasUnsavedChanges={hasDirtyGame}
+                onPreviewPgn={handlePreviewPgn}
+                onConfirmImport={handleConfirmImport}
+                onCancelImport={handleCancelImport}
+                onGoToPly={goToPly}
+              />
+            </div>
+
+            <div
+              className="grid gap-4"
+              hidden={activeWorkflow !== "study"}
+              aria-labelledby="lineforge-workflow-study"
+            >
+              <WorkflowHeading sectionId="study" />
+              <MoveAnnotationPanel
+                game={game}
+                currentPly={currentPly}
+                comparisonLensIds={comparisonLensIds}
+                onComparisonLensIdsChange={handleComparisonLensIdsChange}
+                onSaveAnnotation={handleSaveAnnotation}
+                onCreateCard={handleCreateCard}
+              />
+              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+                <summary className="cursor-pointer text-sm font-medium text-stone-100">
+                  Optional local engine analysis
+                </summary>
+                <div className="mt-4">
+                  <EngineAnalysisPanel
+                    activeFen={replayChess.fen()}
+                    canAttachToAnnotation={currentPly > 0}
+                    currentAnnotationAnalysis={currentAnnotation?.engineAnalysis}
+                    selectedCard={selectedCard}
+                    onAttachToAnnotation={handleAttachAnalysisToAnnotation}
+                    onAttachToCard={handleAttachAnalysisToCard}
+                  />
+                </div>
+              </details>
+            </div>
+
+            <div
+              className="grid gap-4"
+              hidden={activeWorkflow !== "review" && activeWorkflow !== "weaknesses"}
+              aria-labelledby={`lineforge-workflow-${activeWorkflow === "weaknesses" ? "weaknesses" : "review"}`}
+            >
+              <WorkflowHeading sectionId={activeWorkflow === "weaknesses" ? "weaknesses" : "review"} />
+              {activeWorkflow === "review" ? (
+                <DrillQueuePanel
+                  cards={cards}
+                  activeGameId={game.id}
+                  activeGameName={game.name}
+                  sourceGameNames={sourceGameNames}
+                  reviewSchedule={reviewSchedule}
+                  comparisonLensIds={comparisonLensIds}
+                  onComparisonLensIdsChange={handleComparisonLensIdsChange}
+                  selectedCardId={selectedCard?.id ?? null}
+                  revealed={selectedCard ? revealedCardId === selectedCard.id : false}
+                  onSelectCard={handleSelectCard}
+                  onReveal={() => selectedCard && setRevealedCardId(selectedCard.id)}
+                  onReview={handleReview}
+                  onAttemptMove={handleAttemptMove}
+                  attemptResult={
+                    selectedCard && revealedCardId === selectedCard.id ? attemptResult : null
+                  }
+                />
+              ) : (
+                <MistakeDashboard
+                  stats={stats}
+                  sessionSummaries={sessionSummaries}
+                  openingMap={openingMap}
+                  openingTrend={openingTrend}
+                  reviewSchedule={reviewSchedule}
+                />
+              )}
+              <ReviewSessionPanel
+                cards={cards}
+                comparisonLensIds={comparisonLensIds}
+                sessionSummaries={sessionSummaries}
+                reviewSchedule={reviewSchedule}
+                schedulePreferences={schedulePreferences}
+                onSchedulePresetChange={handleSchedulePresetChange}
+                displayMode={activeWorkflow === "weaknesses" ? "weaknesses" : "review"}
+                openingMap={openingMap}
+                openingTrend={openingTrend}
+                activeGameId={isDraftGame ? null : game.id}
+                onRecordCardReview={handleSessionCardReview}
+                onCompleteSession={handleCompleteSession}
+                onClearSessionHistory={handleClearSessionHistory}
+                onRequestReviewView={() => setActiveWorkflow("review")}
+              />
+            </div>
+
+            <div
+              className="grid gap-4"
+              hidden={activeWorkflow !== "data"}
+              aria-labelledby="lineforge-workflow-data"
+            >
+              <WorkflowHeading sectionId="data" />
+              <section className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+                <h2 className="text-lg font-semibold text-stone-100">Local data</h2>
+                <p className="mt-1 text-sm text-stone-500">
+                  LineForge stores study data in this browser, exports local JSON backups,
+                  and does not use accounts, cloud sync, or external services.
+                </p>
+              </section>
+              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+                <summary className="cursor-pointer text-sm font-medium text-stone-100">
+                  Backup and JSON export tools
+                </summary>
+                <div className="mt-4">
+                  <BackupPanel onExport={handleExportBackup} onImport={handleImportBackup} />
+                </div>
+              </details>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
+  );
+}
+
+function WorkflowHeading({ sectionId }: { sectionId: WorkflowSection }) {
+  const section = WORKFLOW_SECTIONS.find((item) => item.id === sectionId);
+
+  if (!section) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+      <h2 id={`lineforge-workflow-${section.id}`} className="text-xl font-semibold text-stone-100">
+        {section.label}
+      </h2>
+      <p className="mt-1 text-sm text-stone-500">{section.description}</p>
+    </div>
   );
 }
