@@ -4,14 +4,14 @@ This roadmap keeps LineForge focused on the local-first review loop before expan
 
 ## Near Term
 
-- Add a visual saved hint for opening weakness filter preference changes.
+- Review other transient error/status messages for polite status semantics.
 - Add a stronger focus trap/dialog primitive if more modals are added.
 - Improve packet preview with optional copy-to-clipboard actions.
 
 ## Study Depth
 
-- Add a review calendar or lightweight scheduling layer derived from attempt history.
-- Add opening weakness trends over time.
+- Add a review calendar/scheduling layer without external calendar integration first.
+- Refine opening weakness trends over time.
 - Add more drill queue filters for success rate, last reviewed date, and source game.
 
 ## Engine-Assisted Review
@@ -24,8 +24,13 @@ This roadmap keeps LineForge focused on the local-first review loop before expan
 
 - Persisted coach lens comparison preferences.
 - Review-session mode with sizing, missed-only repeat, summaries, and history detail.
+- Local deterministic review scheduling, due-review sessions, and schedule priority scoring.
+- Schedule badges across mistake-card surfaces.
+- DrillQueue due-status filter, selected-card fallback, empty filtered states, and persisted filter preference.
 - Opening weakness map using early-game cards where `ply <= 20`.
 - Opening weakness filters, reset control, filtered review sessions, and persisted filter preferences.
+- Opening weakness trends from local review history.
+- Accessible saved hints using shared polite `StatusHint` semantics.
 
 ## Optional AI Layer
 

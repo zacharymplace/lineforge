@@ -24,6 +24,7 @@ MistakeGraph owns mistake cards and aggregate mistake statistics:
 - dashboard stats by verdict, tag, and recency
 - deterministic opening weakness maps from early-game cards
 - opening weakness filters, reset state, and filter preferences
+- opening weakness trends over local review history
 
 Key files live under `src/lib/mistake-graph`.
 
@@ -43,6 +44,8 @@ It uses only saved structured data: cards, plies, move SAN, verdicts, tags, revi
 
 The filter layer supports missed only, remembered only, current active saved game only, selected verdict, and selected tag. Filter preferences are stored in browser localStorage.
 
+Opening weakness trends group local review attempts and skipped session results by date and deterministic bucket. Trend summaries identify latest success rate, most missed bucket, improving/worsening buckets, and recommended next focus without inferring named openings.
+
 ## DrillQueue
 
 DrillQueue owns active review behavior:
@@ -51,6 +54,12 @@ DrillQueue owns active review behavior:
 - evaluating a played answer
 - appending attempt history
 - keeping summary attempts/correct counts consistent
+- deterministic review scheduling from card attempt history and session results
+- statuses such as due now, due soon, new, and stable
+- priority scoring from missed attempts, low success rate, important verdicts/tags, never-reviewed cards, and recent skipped results
+- due-review session creation from scheduled cards
+- schedule badges on mistake-card surfaces
+- DrillQueue due-status filters and persisted filter preference
 - review sessions built from filters, bucket card ids, or missed-only repeats
 - session sizing with persisted preferred size
 - completed session summaries and session history detail
@@ -113,5 +122,15 @@ LineForge keeps core data and lightweight preferences browser-local. Current pre
 - coach lens comparison selection
 - review-session size
 - opening weakness map filters
+- DrillQueue due-status filter
 
 These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid.
+
+## UI Helpers
+
+Small UI helpers keep repeated status surfaces consistent:
+
+- `ScheduleBadge` renders local schedule status, priority, success rate, last reviewed context, and recommended card action.
+- `StatusHint` renders subtle saved/status hints with `role="status"` and `aria-live="polite"`.
+
+These are intentionally local UI primitives, not a global notification system.

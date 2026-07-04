@@ -22,6 +22,8 @@ LineForge turns raw games into:
 - active drill attempts
 - review sessions with missed-only repeats
 - inspectable review-session history
+- local deterministic due-review scheduling
+- schedule badges and DrillQueue due-status filtering
 - deterministic review summaries
 - deterministic coach lens comparisons
 - deterministic opening weakness maps
@@ -40,15 +42,30 @@ LineForge turns raw games into:
 9. Drill individual cards by playing the move.
 10. Run filtered review sessions with a persisted size preference.
 11. Repeat missed cards and inspect session history.
-12. Map opening weaknesses from early-game cards.
-13. Filter opening weakness buckets and review visible cards.
-14. Export review packets and backup local data.
+12. Review locally scheduled due cards.
+13. Filter DrillQueue by due status.
+14. Map opening weaknesses from early-game cards.
+15. Filter opening weakness buckets and review visible cards.
+16. Inspect opening weakness trends.
+17. Export review packets and backup local data.
 
 ## Review Sessions
 
 Review sessions let users drill multiple cards in a focused pass. A session can be built from all cards, verdict/tag filters, missed-recently cards, lowest success rate, most recent cards, missed-only repeats, or opening weakness buckets.
 
 The session size selector supports `5`, `10`, `15`, and `all`, and the preferred size persists in browser localStorage. Completed sessions store summaries with reviewed, remembered, missed, skipped, success rate, top missed tags, recommended next action, and compact per-card result details. Session history can be inspected or cleared without deleting games, cards, annotations, or review attempts.
+
+## Review Scheduling
+
+LineForge builds a local deterministic schedule from mistake-card review history and session results. Cards can be classified as due now, due soon, new, or stable. Priority scoring uses only local data: missed last attempt, low success rate, never-reviewed state, blunder verdicts, priority tags such as missed tactic and king safety, and recent skipped session results.
+
+The schedule panel can start a due-review session. It chooses due-now cards first, then due-soon cards, then new cards if no due cards are available. This is not a calendar system: there are no notifications, no external calendar integration, and no cloud scheduling.
+
+## Schedule Badges And DrillQueue Filtering
+
+Mistake-card surfaces show text-based schedule badges with review status, priority label, success rate, last reviewed date, and a short recommended action. Badges are derived from the same shared schedule helpers used by the schedule panel.
+
+DrillQueue can filter the card list by all cards, due now, due soon, new, stable, and high priority. Filtering is non-mutating. If the selected card is hidden, DrillQueue selects the first visible card when available; if no cards match, it shows a clear empty state. The preferred filter persists locally and shows "Filter saved locally" after changes.
 
 ## Opening Weakness Map
 
@@ -66,6 +83,10 @@ The map can be filtered by missed only, remembered only, current active saved ga
 
 LineForge does not infer named openings. The map reflects saved tags, verdicts, review stats, moves, and optional engine fields only.
 
+## Opening Weakness Trends
+
+Opening weakness trends group local opening-card review attempts and skipped session results by date and bucket. The trend view summarizes latest success, most missed bucket, improving/worsening buckets, and recommended next focus. Trend focus buckets can start review sessions.
+
 ## Local Preferences
 
 LineForge stores lightweight browser-local preferences for:
@@ -74,7 +95,10 @@ LineForge stores lightweight browser-local preferences for:
 - coach lens comparison selection
 - review-session size
 - opening weakness map filters
+- DrillQueue due-status filter
+
+Saved preference hints use a shared accessible `StatusHint` with polite status semantics, so messages such as "Filter saved locally" and "Filters saved locally" remain subtle while still being exposed to assistive technology.
 
 ## Product Boundaries
 
-LineForge is intentionally not a playing server, social network, subscription product, or AI coach wrapper. The current product is local-first and deterministic, with optional local engine assistance for selected positions only.
+LineForge is intentionally not a playing server, social network, subscription product, calendar app, notification system, or AI coach wrapper. The current product is local-first and deterministic, with optional local engine assistance for selected positions only.
