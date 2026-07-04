@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import {
   DEFAULT_COACH_LENS_ID,
@@ -22,6 +22,11 @@ import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { DrillAttemptResult, MistakeCard, ReviewResult } from "@/lib/move-ledger/types";
 import { buildCardReviewPacket } from "@/lib/review-packets/build";
 import type { ReviewPacket } from "@/lib/review-packets/types";
+import {
+  clearTransientMessageState,
+  createTransientMessageState,
+  type TransientMessageState,
+} from "@/lib/ui/transient-message";
 import { CoachLensComparison } from "./CoachLensComparison";
 import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
@@ -94,6 +99,11 @@ export function DrillQueuePanel({
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
   const [showLensComparison, setShowLensComparison] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<TransientMessageState>({
+    message: null,
+    token: 0,
+  });
+  const savedMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
@@ -144,6 +154,29 @@ export function DrillQueuePanel({
     }
   }
 
+  function handleScheduleFilterChange(value: string) {
+    setScheduleFilter(saveDrillQueueScheduleFilterPreference(value));
+    showSavedMessage();
+  }
+
+  function showSavedMessage() {
+    setSavedMessage((currentMessage) => {
+      const nextMessage = createTransientMessageState("Filter saved locally", currentMessage);
+
+      if (savedMessageTimeoutRef.current) {
+        clearTimeout(savedMessageTimeoutRef.current);
+      }
+
+      savedMessageTimeoutRef.current = setTimeout(() => {
+        setSavedMessage((messageState) =>
+          clearTransientMessageState(messageState, nextMessage.token),
+        );
+      }, 2200);
+
+      return nextMessage;
+    });
+  }
+
   return (
     <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
       <div>
@@ -158,11 +191,7 @@ export function DrillQueuePanel({
             <select
               className="lf-field"
               value={scheduleFilter}
-              onChange={(event) =>
-                setScheduleFilter(
-                  saveDrillQueueScheduleFilterPreference(event.target.value),
-                )
-              }
+              onChange={(event) => handleScheduleFilterChange(event.target.value)}
             >
               {REVIEW_SCHEDULE_FILTERS.map((filter) => (
                 <option key={filter} value={filter}>
@@ -174,6 +203,9 @@ export function DrillQueuePanel({
           <div className="text-xs text-stone-500">
             {getScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
           </div>
+          {savedMessage.message ? (
+            <div className="text-xs text-emerald-300">{savedMessage.message}</div>
+          ) : null}
           <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
           {cards.length === 0 ? (
             <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
