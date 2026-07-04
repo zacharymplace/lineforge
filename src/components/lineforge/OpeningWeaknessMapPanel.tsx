@@ -29,6 +29,7 @@ import {
   type TransientMessageState,
 } from "@/lib/ui/transient-message";
 import { ScheduleBadge } from "./ScheduleBadge";
+import { StatusHint } from "./StatusHint";
 import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 
 type OpeningWeaknessMapPanelProps = {
@@ -225,9 +226,7 @@ export function OpeningWeaknessMapPanel({
           filters: {filterSummary.activeFilterLabels.join(", ")} · top visible bucket:{" "}
           {filterSummary.topVisibleBucket?.label ?? "none"}
         </div>
-        {savedMessage.message ? (
-          <div className="text-xs text-emerald-300">{savedMessage.message}</div>
-        ) : null}
+        <StatusHint message={savedMessage.message} />
       </div>
 
       {filteredMap.buckets.length === 0 ? (

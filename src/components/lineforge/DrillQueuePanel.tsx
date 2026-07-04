@@ -32,6 +32,7 @@ import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
 import { ScheduleBadge } from "./ScheduleBadge";
+import { StatusHint } from "./StatusHint";
 import {
   REVIEW_SCHEDULE_FILTERS,
   filterCardsByScheduleStatus,
@@ -203,9 +204,7 @@ export function DrillQueuePanel({
           <div className="text-xs text-stone-500">
             {getScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
           </div>
-          {savedMessage.message ? (
-            <div className="text-xs text-emerald-300">{savedMessage.message}</div>
-          ) : null}
+          <StatusHint message={savedMessage.message} />
           <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
           {cards.length === 0 ? (
             <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
