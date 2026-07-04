@@ -25,6 +25,28 @@ LineForge is a private post-game study app. It helps you import games, inspect t
 15. Export review packets as Markdown or JSON.
 16. Back up local data as JSON.
 
+## Try The Demo Game
+
+LineForge includes a small local demo PGN so a first-time evaluator does not need to bring their own game.
+
+1. Run the app with `npm run dev`.
+2. Open the Play workflow.
+3. In PGN import, click **Try demo game**.
+4. Inspect the preview metadata, move snippets, and preview board scrubber.
+5. Click **Import game** to create an unsaved draft.
+
+The demo uses the same safe PGN preview flow as pasted games. It does not replace the active board until import is confirmed.
+
+Suggested first review flow:
+
+1. Try demo game.
+2. Confirm import.
+3. Annotate a move with a thought, verdict, and tags.
+4. Create a mistake card from that position.
+5. Analyze the selected position with optional local Stockfish.
+6. Review the card by playing the remembered move.
+7. Export a review packet as Markdown or JSON.
+
 ## Features
 
 ### Local-First Saved Game Library
@@ -33,7 +55,7 @@ Save multiple games locally with names, PGNs, move lists, timestamps, and annota
 
 ### PGN Import Preview
 
-Paste a PGN, inspect detected metadata, preview first/last moves, and scrub through the imported game on a smaller board before confirming. Invalid PGNs do not replace the active board.
+Paste a PGN or use the local demo game, inspect detected metadata, preview first/last moves, and scrub through the imported game on a smaller board before confirming. Invalid PGNs do not replace the active board.
 
 ### Move Annotations
 
@@ -167,6 +189,18 @@ LineForge uses small internal domains:
 
 More detail lives in [`docs/architecture.md`](docs/architecture.md).
 
+## Portfolio Presentation Notes
+
+Recommended screenshots for a portfolio page or case study:
+
+- Play / PGN import: workflow navigation, main board, demo PGN preview, and preview scrubber.
+- Study / annotation + engine: move annotation, saved analysis timestamp, deterministic summary, and coach lens output.
+- Review / DrillQueue + schedule: schedule badges, active filter chips, DrillQueue card detail, and due-review controls.
+- Weaknesses / opening map + trends: opening weakness buckets, filters, trend rows, and recommended focus.
+- Data / backup + review packets: review packet preview modal, Markdown/JSON export, and local backup controls.
+
+No screenshots are checked into this repo yet. See [`docs/case-study.md`](docs/case-study.md) for a portfolio-ready narrative.
+
 ## Local Development
 
 Install dependencies:
@@ -213,6 +247,10 @@ See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the Stockfish package
 
 Disciplined next steps:
 
+- Capture a consistent screenshot set for the five workflow sections.
+- Add a sample-data walkthrough built around the demo game.
+- Integrate the case study into a portfolio page.
+- Consider an optional deployed static demo only after licensing and deployment constraints are handled.
 - Review other transient error/status messages for polite status semantics.
 - Add a stronger focus trap/dialog primitive if more modals are added.
 - Add a local review calendar layer without external calendar integration first.
@@ -222,3 +260,4 @@ Disciplined next steps:
 - Add an optional AI coach layer only after deterministic review logic remains stable.
 
 See [`docs/roadmap.md`](docs/roadmap.md) for more detail.
+See [`docs/case-study.md`](docs/case-study.md) for a portfolio-style product narrative.
