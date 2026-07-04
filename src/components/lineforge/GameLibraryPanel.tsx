@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { LineForgeGame, MoveLedgerLibrary } from "@/lib/move-ledger/types";
 import { summarizeGame } from "@/lib/move-ledger/library";
+import { getDisplayGameName } from "@/lib/move-ledger/game";
 
 type GameLibraryPanelProps = {
   activeGame: LineForgeGame;
@@ -29,8 +30,18 @@ export function GameLibraryPanel({
   onLoadGame,
   onDeleteGame,
 }: GameLibraryPanelProps) {
-  const [name, setName] = useState(activeGame.name);
+  const activeGameDisplayName = isDraftGame ? getDisplayGameName(activeGame) : activeGame.name;
+  const nameDraftKey = `${activeGame.id}:${activeGameDisplayName}`;
+  const [nameDraft, setNameDraft] = useState({
+    key: nameDraftKey,
+    value: activeGameDisplayName,
+  });
+  const name = nameDraft.key === nameDraftKey ? nameDraft.value : activeGameDisplayName;
   const summaries = library.savedGames.map(summarizeGame);
+
+  function setName(value: string) {
+    setNameDraft({ key: nameDraftKey, value });
+  }
 
   function handleSave() {
     onSaveGame(name);
@@ -41,7 +52,7 @@ export function GameLibraryPanel({
       <div>
         <h2 className="text-base font-semibold text-stone-100">Games</h2>
         <p className="text-sm text-stone-500">
-          Current: <span className="text-amber-100">{activeGame.name}</span>
+          Current: <span className="text-amber-100">{activeGameDisplayName}</span>
           <span className="ml-2 text-xs text-stone-400">
             {isDraftGame ? "Draft game" : hasUnsavedChanges ? "Unsaved changes" : "Saved"}
           </span>
@@ -58,7 +69,7 @@ export function GameLibraryPanel({
               onUpdateDraftName(event.target.value);
             }
           }}
-          onFocus={() => setName(activeGame.name)}
+          onFocus={() => setName(activeGameDisplayName)}
           placeholder={isDraftGame ? "Draft name" : "Saved game name"}
         />
         <button className="lf-button-primary" onClick={handleSave}>

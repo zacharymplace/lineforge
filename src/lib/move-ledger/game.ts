@@ -2,9 +2,25 @@ import { Chess, type Move, type Square } from "chess.js";
 import type { LineForgeGame, LineForgeMove } from "./types";
 
 export const STARTING_FEN = new Chess().fen();
+export const DEFAULT_GAME_NAME = "Untitled game";
+const LEGACY_DEFAULT_GAME_NAME = "Analysis board";
 
 export function createGameId() {
   return `game-${Date.now()}-${crypto.randomUUID()}`;
+}
+
+export function normalizeDefaultGameName(name: string | null | undefined) {
+  const trimmedName = name?.trim();
+
+  if (!trimmedName || trimmedName === LEGACY_DEFAULT_GAME_NAME) {
+    return DEFAULT_GAME_NAME;
+  }
+
+  return trimmedName;
+}
+
+export function getDisplayGameName(game: Pick<LineForgeGame, "name"> | string | null | undefined) {
+  return normalizeDefaultGameName(typeof game === "string" ? game : game?.name);
 }
 
 export function createEmptyGame(): LineForgeGame {
@@ -13,7 +29,7 @@ export function createEmptyGame(): LineForgeGame {
 
   return {
     id: createGameId(),
-    name: "Untitled game",
+    name: DEFAULT_GAME_NAME,
     pgn: chess.pgn(),
     initialFen: STARTING_FEN,
     fen: chess.fen(),
@@ -49,7 +65,7 @@ export function createGameFromChess(
 
   return {
     id: existing?.id ?? createGameId(),
-    name: existing?.name ?? "Untitled game",
+    name: existing?.name ?? DEFAULT_GAME_NAME,
     pgn: chess.pgn(),
     initialFen: existing?.initialFen ?? STARTING_FEN,
     fen: chess.fen(),

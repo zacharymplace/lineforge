@@ -3,6 +3,24 @@ import { Chess, validateFen } from "chess.js";
 
 const verdicts = ["good", "mistake", "blunder", "unclear"];
 const tags = ["missed tactic", "hung piece", "time pressure"];
+const defaultGameName = "Untitled game";
+const legacyDefaultGameName = "Analysis board";
+
+function normalizeDefaultGameName(name) {
+  const trimmedName = name?.trim();
+
+  if (!trimmedName || trimmedName === legacyDefaultGameName) {
+    return defaultGameName;
+  }
+
+  return trimmedName;
+}
+
+function getDisplayGameName(gameOrName) {
+  return normalizeDefaultGameName(
+    typeof gameOrName === "string" ? gameOrName : gameOrName?.name,
+  );
+}
 
 function calculateMistakeStats(cards) {
   const byVerdict = Object.fromEntries(verdicts.map((verdict) => [verdict, 0]));
@@ -3674,5 +3692,17 @@ assert.throws(() =>
   ),
 );
 assert.throws(() => parseBackupJson("{ nope"));
+
+assert.equal(getDisplayGameName(legacyDefaultGameName), defaultGameName);
+assert.equal(getDisplayGameName({ name: legacyDefaultGameName }), defaultGameName);
+assert.equal(getDisplayGameName("Ada prep game"), "Ada prep game");
+assert.equal(getDisplayGameName("  Ada prep game  "), "Ada prep game");
+assert.equal(getDisplayGameName(""), defaultGameName);
+assert.equal(getDisplayGameName(null), defaultGameName);
+assert.equal(normalizeDefaultGameName(undefined), defaultGameName);
+
+const legacyDraftSaveName = getDisplayGameName({ name: legacyDefaultGameName });
+const legacyDraftLibrary = upsertSavedGame(createEmptyLibrary(), game, legacyDraftSaveName);
+assert.equal(legacyDraftLibrary.savedGames[0].name, defaultGameName);
 
 console.log("LineForge smoke test passed.");

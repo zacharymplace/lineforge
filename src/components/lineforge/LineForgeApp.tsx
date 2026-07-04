@@ -46,7 +46,13 @@ import { buildOpeningWeaknessTrend } from "@/lib/mistake-graph/opening-weakness-
 import { calculateMistakeStats } from "@/lib/mistake-graph/stats";
 import { emptyAnnotation } from "@/lib/move-ledger/annotations";
 import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledger/backup";
-import { createEmptyGame, createGameFromChess, loadGameAtPly, tryMove } from "@/lib/move-ledger/game";
+import {
+  createEmptyGame,
+  createGameFromChess,
+  getDisplayGameName,
+  loadGameAtPly,
+  tryMove,
+} from "@/lib/move-ledger/game";
 import {
   createGameFromImportPreview,
   parsePgnImportPreview,
@@ -187,6 +193,7 @@ export function LineForgeApp() {
   );
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
+  const activeGameDisplayName = isDraftGame ? getDisplayGameName(game) : game.name;
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const currentAnnotation = game.annotations[currentPly];
   const sourceGameNames = useMemo(
@@ -510,7 +517,7 @@ export function LineForgeApp() {
               </p>
             </div>
             <div className="max-w-full rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
-              Local-first · no accounts · optional local engine · {game.name}
+              Local-first · no accounts · optional local engine · {activeGameDisplayName}
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
