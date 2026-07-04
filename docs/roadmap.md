@@ -12,7 +12,7 @@ This roadmap keeps LineForge focused on the local-first review loop before expan
 ## Study Depth
 
 - Add a local review calendar layer without external calendar integration first.
-- Add configurable scheduling intervals.
+- Add optional custom numeric scheduling controls.
 - Refine opening weakness trends over time.
 
 ## Engine-Assisted Review
@@ -26,6 +26,7 @@ This roadmap keeps LineForge focused on the local-first review loop before expan
 - Persisted coach lens comparison preferences.
 - Review-session mode with sizing, missed-only repeat, summaries, and history detail.
 - Local deterministic review scheduling, due-review sessions, and schedule priority scoring.
+- Configurable local scheduling presets: Gentle, Standard, and Intense.
 - Schedule badges across mistake-card surfaces.
 - DrillQueue due-status filter, selected-card fallback, empty filtered states, and persisted due-status preference.
 - DrillQueue source-game and last-reviewed filters.

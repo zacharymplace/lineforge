@@ -66,7 +66,13 @@ LineForge builds a lightweight deterministic due-review schedule from local card
 
 Priority scoring is local and conservative. Missed last attempts, low success rates, important tags such as missed tactic or king safety, blunder verdicts, never-reviewed cards, and recent skipped results can raise a card's priority. The schedule panel can start a due-review session from due-now cards first, falling back to due-soon or new cards.
 
-LineForge does not include calendar integration, notifications, or external scheduling services.
+The schedule cadence can be adjusted with local deterministic presets:
+
+- Gentle: less aggressive, with fewer urgent cards and a longer stable window.
+- Standard: the default behavior and the original LineForge scheduling cadence.
+- Intense: more aggressive, making skipped, stale, and lower-success cards surface sooner.
+
+The selected preset persists in browser `localStorage`, invalid saved values normalize safely back to defaults, and Reset cadence restores Standard. LineForge does not include calendar integration, notifications, external scheduling services, or custom numeric scheduling controls.
 
 ### Schedule Badges
 
@@ -151,12 +157,12 @@ LineForge uses small internal domains:
 
 - **MoveLedger**: game state, PGN import, saved game library, annotations, localStorage, and backup data.
 - **MistakeGraph**: mistake cards, aggregate mistake statistics, and opening weakness maps.
-- **DrillQueue**: active card review, move-answer evaluation, attempt history, review scheduling, schedule badges, combined DrillQueue filtering, active filter chips, selected-card fallback, review sessions, session history, and session/filter preferences.
+- **DrillQueue**: active card review, move-answer evaluation, attempt history, configurable local scheduling presets, schedule badges, combined DrillQueue filtering, active filter chips, selected-card fallback, review sessions, session history, and session/filter preferences.
 - **Engine**: optional local Stockfish adapter, engine result formatting, depth preferences, and analysis attachment helpers.
 - **Explanations**: deterministic review summaries and drill recommendations.
 - **CoachLenses**: deterministic learning perspectives, lens comparison, and comparison preferences.
 - **ReviewPackets**: compact JSON/Markdown packet construction, preview, filenames, and local download.
-- **Preferences/localStorage helpers**: browser-local preferences for engine depth, coach lens comparison, review-session size, opening weakness filters, and DrillQueue due-status filter. Source-game and last-reviewed DrillQueue filters stay session-local by design.
+- **Preferences/localStorage helpers**: browser-local preferences for engine depth, coach lens comparison, review-session size, review schedule preset, opening weakness filters, and DrillQueue due-status filter. Source-game and last-reviewed DrillQueue filters stay session-local by design.
 - **UI helpers**: small shared UI utilities such as `ScheduleBadge` and accessible `StatusHint` for polite saved/status messages.
 
 More detail lives in [`docs/architecture.md`](docs/architecture.md).
@@ -186,7 +192,7 @@ npm run build
 ## Privacy And Local-First Boundaries
 
 - Core study data is stored in browser `localStorage`.
-- Browser-local preferences store engine depth, coach lens comparison, review-session size, opening weakness map filters, and DrillQueue due-status filter.
+- Browser-local preferences store engine depth, coach lens comparison, review-session size, review schedule preset, opening weakness map filters, and DrillQueue due-status filter.
 - DrillQueue source-game and last-reviewed filters are session-local and are not written to persistent storage.
 - Backup/export uses local JSON files.
 - Review packets download as local Markdown or JSON.
@@ -210,7 +216,7 @@ Disciplined next steps:
 - Review other transient error/status messages for polite status semantics.
 - Add a stronger focus trap/dialog primitive if more modals are added.
 - Add a local review calendar layer without external calendar integration first.
-- Add configurable scheduling intervals.
+- Add optional custom numeric scheduling controls.
 - Refine opening weakness trends over time.
 - Run a broader accessibility review for complex flows.
 - Add an optional AI coach layer only after deterministic review logic remains stable.

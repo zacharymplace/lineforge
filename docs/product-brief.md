@@ -59,7 +59,15 @@ The session size selector supports `5`, `10`, `15`, and `all`, and the preferred
 
 LineForge builds a local deterministic schedule from mistake-card review history and session results. Cards can be classified as due now, due soon, new, or stable. Priority scoring uses only local data: missed last attempt, low success rate, never-reviewed state, blunder verdicts, priority tags such as missed tactic and king safety, and recent skipped session results.
 
-The schedule panel can start a due-review session. It chooses due-now cards first, then due-soon cards, then new cards if no due cards are available. This is not a calendar system: there are no notifications, no external calendar integration, and no cloud scheduling.
+The schedule panel can start a due-review session. It chooses due-now cards first, then due-soon cards, then new cards if no due cards are available.
+
+Users can choose a local scheduling preset:
+
+- Gentle: a less aggressive cadence with fewer urgent cards and a longer stable window.
+- Standard: the default/current scheduling behavior.
+- Intense: a more aggressive cadence that surfaces skipped, stale, and lower-success cards sooner.
+
+The selected preset persists locally, invalid saved preferences normalize safely, and reset restores Standard. This is not a calendar system: there are no notifications, no external calendar integration, no cloud scheduling, and no custom numeric scheduling controls in this version.
 
 ## Schedule Badges And DrillQueue Filtering
 
@@ -102,6 +110,7 @@ LineForge stores lightweight browser-local preferences for:
 - engine depth
 - coach lens comparison selection
 - review-session size
+- review schedule preset
 - opening weakness map filters
 - DrillQueue due-status filter
 

@@ -57,6 +57,9 @@ DrillQueue owns active review behavior:
 - deterministic review scheduling from card attempt history and session results
 - statuses such as due now, due soon, new, and stable
 - priority scoring from missed attempts, low success rate, important verdicts/tags, never-reviewed cards, and recent skipped results
+- `schedule.ts` accepts normalized scheduling preferences so the same schedule calculation powers badges, dashboards, filters, and due-review sessions
+- `schedule-preferences.ts` owns Gentle, Standard, and Intense presets, localStorage persistence, validation, fallback, and reset behavior
+- `ReviewSchedulePanel` provides the compact cadence selector, preset explanation, reset control, and saved-local hint
 - due-review session creation from scheduled cards
 - schedule badges on mistake-card surfaces
 - DrillQueue combined filters for due status, source game, and last-reviewed recency
@@ -124,10 +127,11 @@ LineForge keeps core data and lightweight preferences browser-local. Current pre
 - engine depth
 - coach lens comparison selection
 - review-session size
+- review schedule preset
 - opening weakness map filters
 - DrillQueue due-status filter
 
-These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid. DrillQueue source-game and last-reviewed filters are session-local by design and do not add localStorage keys.
+These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid. Review schedule presets normalize to Standard when invalid. DrillQueue source-game and last-reviewed filters are session-local by design and do not add localStorage keys.
 
 ## UI Helpers
 
