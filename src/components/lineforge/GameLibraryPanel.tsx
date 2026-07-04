@@ -37,11 +37,11 @@ export function GameLibraryPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Game library</h2>
+        <h2 className="text-base font-semibold text-stone-100">Games</h2>
         <p className="text-sm text-stone-500">
-          Active game: <span className="text-amber-100">{activeGame.name}</span>
+          Current: <span className="text-amber-100">{activeGame.name}</span>
           <span className="ml-2 text-xs text-stone-400">
             {isDraftGame ? "Draft game" : hasUnsavedChanges ? "Unsaved changes" : "Saved"}
           </span>

@@ -26,7 +26,7 @@ export function ChessBoardPanel({
 
   return (
     <section className="grid min-w-0 gap-3 sm:gap-4">
-      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-1.5 shadow-2xl shadow-black/40 sm:p-2">
+      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-1.5 shadow-2xl shadow-black/40 sm:p-2 xl:max-w-[30rem]">
         <Chessboard
           options={{
             id: "lineforge-board",

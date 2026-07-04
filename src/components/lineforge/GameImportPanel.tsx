@@ -77,13 +77,15 @@ export function GameImportPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">MoveLedger</h2>
-        <p className="text-sm text-stone-500">Import, replay, and inspect your game record.</p>
+        <h2 className="text-base font-semibold text-stone-100">PGN import</h2>
+        <p className="text-sm text-stone-500">
+          Preview and inspect a game record before replacing the active board.
+        </p>
       </div>
       {hasUnsavedChanges ? (
-        <div className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100">
+        <div className="rounded-md border border-amber-900/70 bg-amber-950/30 p-3 text-sm text-amber-100">
           Current game has unsaved changes. Previewing is safe; confirming an import will replace
           the active draft.
         </div>
@@ -112,7 +114,7 @@ export function GameImportPanel({
         <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3 text-sm">
           {preview.warning ? (
             <div
-              className="rounded-md border border-amber-800 bg-amber-950/50 p-2 text-amber-100"
+              className="rounded-md border border-amber-900/70 bg-amber-950/30 p-2 text-amber-100"
               role="status"
               aria-live="polite"
             >

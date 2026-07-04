@@ -13,7 +13,7 @@ export function createEmptyGame(): LineForgeGame {
 
   return {
     id: createGameId(),
-    name: "Analysis board",
+    name: "Untitled game",
     pgn: chess.pgn(),
     initialFen: STARTING_FEN,
     fen: chess.fen(),
@@ -49,7 +49,7 @@ export function createGameFromChess(
 
   return {
     id: existing?.id ?? createGameId(),
-    name: existing?.name ?? "Analysis board",
+    name: existing?.name ?? "Untitled game",
     pgn: chess.pgn(),
     initialFen: existing?.initialFen ?? STARTING_FEN,
     fen: chess.fen(),

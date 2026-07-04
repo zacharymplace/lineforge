@@ -305,7 +305,7 @@ export function LineForgeApp() {
 
     setGame((currentGame) => ({
       ...currentGame,
-      name: name.trim() || "Analysis board",
+      name: name.trim() || "Untitled game",
       updatedAt: new Date().toISOString(),
     }));
   }
@@ -540,7 +540,7 @@ export function LineForgeApp() {
             ))}
           </div>
           <nav
-            className="-mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0"
+            className="-mx-3 mt-2 flex gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0"
             aria-label="LineForge workflows"
           >
             {WORKFLOW_SECTIONS.map((section) => {
@@ -549,7 +549,7 @@ export function LineForgeApp() {
               return (
                 <button
                   key={section.id}
-                  className={`min-h-11 min-w-24 shrink-0 rounded-md border px-3 py-2 text-left text-sm transition sm:min-w-32 ${
+                  className={`min-h-10 min-w-[5.75rem] shrink-0 rounded-md border px-2.5 py-1.5 text-left text-sm transition md:min-w-28 md:px-3 md:py-2 ${
                     isActive
                       ? "border-amber-700 bg-amber-950/50 text-amber-100"
                       : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700 hover:text-stone-100"
@@ -561,7 +561,7 @@ export function LineForgeApp() {
                   onClick={() => setActiveWorkflow(section.id)}
                 >
                   <span className="block font-medium">{section.label}</span>
-                  <span className="hidden text-xs text-stone-500 sm:block">{section.description}</span>
+                  <span className="hidden text-xs text-stone-500 lg:block">{section.description}</span>
                 </button>
               );
             })}
