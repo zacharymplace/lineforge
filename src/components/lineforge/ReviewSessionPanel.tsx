@@ -104,6 +104,9 @@ export function ReviewSessionPanel({
     currentCardId && reviewSchedule
       ? reviewSchedule.items.find((item) => item.cardId === currentCardId)
       : undefined;
+  const currentCardActionLabel = currentCard
+    ? `card ${session ? session.currentCardIndex + 1 : 1}, expected move ${currentCard.moveSan}`
+    : "current card";
 
   function startSession() {
     const nextSession = buildReviewSession(cards, filter, sessionSize);
@@ -270,7 +273,12 @@ export function ReviewSessionPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button className="lf-button-primary" disabled={cards.length === 0} onClick={startSession}>
+            <button
+              className="lf-button-primary"
+              disabled={cards.length === 0}
+              aria-label="Start review session with the selected filter and size"
+              onClick={startSession}
+            >
               Start session
             </button>
             {cards.length === 0 ? (
@@ -283,10 +291,13 @@ export function ReviewSessionPanel({
       {session && currentCard ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
           <div className="grid gap-3">
-            <div className="text-sm text-stone-500">
+            <div className="text-sm text-stone-500" role="status" aria-live="polite">
               Card {session.currentCardIndex + 1} of {session.selectedCardIds.length}
             </div>
-            <div className="overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
+            <div
+              className="overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2"
+              aria-label={`Review board for ${currentCardActionLabel}`}
+            >
               <Chessboard
                 options={{
                   id: `session-${session.id}-${currentCard.id}`,
@@ -319,16 +330,32 @@ export function ReviewSessionPanel({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button className="lf-button-primary" onClick={() => recordResult("remembered")}>
+              <button
+                className="lf-button-primary"
+                aria-label={`Mark ${currentCardActionLabel} as remembered`}
+                onClick={() => recordResult("remembered")}
+              >
                 Remembered
               </button>
-              <button className="lf-button" onClick={() => recordResult("missed")}>
+              <button
+                className="lf-button"
+                aria-label={`Mark ${currentCardActionLabel} as missed`}
+                onClick={() => recordResult("missed")}
+              >
                 Missed
               </button>
-              <button className="lf-button" onClick={() => recordResult("skipped")}>
+              <button
+                className="lf-button"
+                aria-label={`Skip ${currentCardActionLabel}`}
+                onClick={() => recordResult("skipped")}
+              >
                 Skip
               </button>
-              <button className="lf-button" onClick={() => finishSession()}>
+              <button
+                className="lf-button"
+                aria-label="End the current review session"
+                onClick={() => finishSession()}
+              >
                 End session
               </button>
             </div>

@@ -154,6 +154,7 @@ export function DrillQueuePanel({
     getSourceGameFilterLabel(sourceGameFilter, sourceGameNames, activeGameName),
     getLastReviewedFilterLabel(lastReviewedFilter),
   ];
+  const visibleCardCountLabel = `Showing ${visibleCards.length} of ${cards.length} drill cards. Active filters: ${activeFilterLabels.join(", ")}.`;
   const coachLensInput: CoachLensInput = selectedCard
     ? {
         moveSan: selectedCard.moveSan,
@@ -312,7 +313,7 @@ export function DrillQueuePanel({
             </label>
           </div>
           <div className="grid gap-2 text-xs text-stone-500">
-            <div>
+            <div role="status" aria-live="polite" aria-label={visibleCardCountLabel}>
               Filters: {activeFilterLabels.join(" · ")} · {visibleCards.length} of {cards.length} cards
             </div>
             {activeFilterChips.length > 0 ? (
@@ -326,17 +327,22 @@ export function DrillQueuePanel({
                     <button
                       className="text-stone-500 hover:text-stone-100"
                       type="button"
-                      aria-label={`Clear ${chip.label} filter`}
+                      aria-label={chip.clearLabel}
                       onClick={() => handleClearFilterChip(chip.id)}
                     >
-                      x
+                      <span aria-hidden="true">x</span>
                     </button>
                   </span>
                 ))}
               </div>
             ) : null}
-            <button className="lf-button w-fit text-xs" onClick={handleResetFilters}>
-              Reset filters
+            <button
+              className="lf-button w-fit text-xs"
+              type="button"
+              aria-label="Reset all DrillQueue filters"
+              onClick={handleResetFilters}
+            >
+              Reset all filters
             </button>
           </div>
           <StatusHint message={savedMessage.message} />
@@ -354,6 +360,7 @@ export function DrillQueuePanel({
                 className={`grid w-full gap-1 border-b border-stone-800 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-stone-900 ${
                   selectedCard?.id === card.id ? "bg-stone-900 text-amber-100" : "text-stone-300"
                 }`}
+                aria-label={`Select drill card at ply ${card.ply}, ${card.verdict}, ${card.correct} of ${card.attempts} remembered`}
                 onClick={() => onSelectCard(card.id)}
               >
                 <span>

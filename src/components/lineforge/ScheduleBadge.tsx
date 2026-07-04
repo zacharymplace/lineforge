@@ -18,8 +18,20 @@ export function ScheduleBadge({ item, compact = false }: ScheduleBadgeProps) {
     return null;
   }
 
+  const scheduleSummary = [
+    `Schedule status ${getReviewScheduleBadgeText(item)}`,
+    getReviewSchedulePriorityLabel(item),
+    `${item.successRate}% success`,
+    formatReviewScheduleLastReviewed(item),
+    getReviewScheduleCardAction(item),
+  ].join(", ");
+
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+    <div
+      className="flex flex-wrap items-center gap-1.5 text-xs"
+      role="group"
+      aria-label={scheduleSummary}
+    >
       <span className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-stone-200">
         {getReviewScheduleBadgeText(item)}
       </span>

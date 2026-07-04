@@ -65,6 +65,7 @@ export type DrillQueueFilterChipId = "schedule" | "source-game" | "last-reviewed
 export type DrillQueueFilterChip = {
   id: DrillQueueFilterChipId;
   label: string;
+  clearLabel: string;
 };
 
 export type ReviewScheduleRule = {
@@ -242,6 +243,7 @@ export function getActiveDrillQueueFilterChips(
     chips.push({
       id: "schedule",
       label: getDrillQueueScheduleFilterChipLabel(filter.scheduleFilter),
+      clearLabel: "Clear due status filter",
     });
   }
 
@@ -249,6 +251,7 @@ export function getActiveDrillQueueFilterChips(
     chips.push({
       id: "source-game",
       label: getSourceGameFilterChipLabel(filter.sourceGameFilter, sourceGameNames),
+      clearLabel: "Clear source game filter",
     });
   }
 
@@ -256,6 +259,7 @@ export function getActiveDrillQueueFilterChips(
     chips.push({
       id: "last-reviewed",
       label: getLastReviewedFilterChipLabel(filter.lastReviewedFilter),
+      clearLabel: "Clear last reviewed filter",
     });
   }
 

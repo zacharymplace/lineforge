@@ -75,6 +75,7 @@ export function ReviewSchedulePanel({
         <button
           className="lf-button-primary"
           disabled={dueCardIds.length === 0}
+          aria-label={`Start due review with ${dueCardIds.length} scheduled card${dueCardIds.length === 1 ? "" : "s"}`}
           onClick={() => onStartDueReview(dueCardIds)}
         >
           Start due review
@@ -88,6 +89,7 @@ export function ReviewSchedulePanel({
             <select
               className="lf-field min-w-40"
               value={preferences.preset}
+              aria-describedby="schedule-cadence-description"
               onChange={(event) =>
                 handlePresetChange(event.target.value as ReviewScheduleIntervalPreset)
               }
@@ -102,13 +104,14 @@ export function ReviewSchedulePanel({
           <button
             className="lf-button text-xs"
             type="button"
+            aria-label="Reset schedule cadence to Standard"
             onClick={() => handlePresetChange("standard")}
           >
-            Reset cadence
+            Reset cadence to Standard
           </button>
           <StatusHint message={savedMessage.message} />
         </div>
-        <div className="text-xs text-stone-500">
+        <div id="schedule-cadence-description" className="text-xs text-stone-500">
           {getReviewSchedulePresetDescription(preferences)}
         </div>
       </div>
@@ -149,7 +152,10 @@ export function ReviewSchedulePanel({
               </div>
               <div className="flex flex-wrap items-start gap-2 sm:justify-end">
                 <ScheduleBadge item={item} compact />
-                <span className="rounded-md bg-stone-950 px-2 py-1 font-mono text-xs text-amber-100">
+                <span
+                  className="rounded-md bg-stone-950 px-2 py-1 font-mono text-xs text-amber-100"
+                  aria-label={`Priority score ${item.priorityScore}`}
+                >
                   {item.priorityScore}
                 </span>
               </div>
