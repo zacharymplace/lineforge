@@ -1100,6 +1100,160 @@ function buildOpeningWeaknessVisibleReviewSession(cards, signals) {
   );
 }
 
+const importantScheduleTags = ["missed tactic", "king safety", "hung piece"];
+
+function buildReviewSchedule(cards, sessionSummaries = [], openingMap, now = new Date()) {
+  const openingBucketIdsByCard = getOpeningBucketIdsByCard(openingMap);
+  const items = cards
+    .map((currentCard) =>
+      buildReviewScheduleItem(
+        currentCard,
+        wasSkippedRecently(currentCard.id, sessionSummaries, now),
+        openingBucketIdsByCard.get(currentCard.id) ?? [],
+        now,
+      ),
+    )
+    .sort((a, b) => b.priorityScore - a.priorityScore || b.ply - a.ply);
+  const dueNowItems = items.filter((item) => item.status === "due-now");
+  const dueSoonItems = items.filter((item) => item.status === "due-soon");
+  const stableItems = items.filter((item) => item.status === "stable");
+  const newItems = items.filter((item) => item.status === "new");
+  const dueReviewItems = dueNowItems.length ? dueNowItems : dueSoonItems.length ? dueSoonItems : newItems;
+
+  return {
+    generatedAt: now.toISOString(),
+    items,
+    dueNowCount: dueNowItems.length,
+    dueSoonCount: dueSoonItems.length,
+    stableCount: stableItems.length,
+    newCount: newItems.length,
+    topPriorityItems: items.slice(0, 5),
+    dueReviewCardIds: dueReviewItems.map((item) => item.cardId),
+    recommendedNextAction: getScheduleRecommendation(dueNowItems, dueSoonItems, newItems, items),
+  };
+}
+
+function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds, now) {
+  const lastAttempt = currentCard.attemptHistory.at(-1);
+  const successRate =
+    currentCard.attempts > 0 ? Math.round((currentCard.correct / currentCard.attempts) * 100) : 0;
+  const reasons = [];
+
+  if (currentCard.attempts === 0) {
+    reasons.push({ id: "never-reviewed", label: "Never reviewed", score: 45 });
+  }
+
+  if (lastAttempt?.result === "missed") {
+    reasons.push({ id: "missed-last", label: "Missed last attempt", score: 70 });
+  }
+
+  if (currentCard.attempts >= 2 && successRate < 50) {
+    reasons.push({ id: "low-success-rate", label: `Low success rate (${successRate}%)`, score: 30 });
+  }
+
+  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, now)) {
+    reasons.push({ id: "remembered-recently", label: "Remembered recently", score: -20 });
+  }
+
+  if (currentCard.verdict === "blunder") {
+    reasons.push({ id: "important-verdict", label: "Blunder verdict", score: 20 });
+  }
+
+  for (const tag of importantScheduleTags) {
+    if (currentCard.tags.includes(tag)) {
+      reasons.push({
+        id: "important-tag",
+        label: `Priority tag: ${tag}`,
+        score: tag === "missed tactic" ? 16 : 12,
+      });
+    }
+  }
+
+  if (skippedRecently) {
+    reasons.push({ id: "recently-skipped", label: "Skipped in a recent session", score: 25 });
+  }
+
+  return {
+    cardId: currentCard.id,
+    moveSan: currentCard.moveSan,
+    ply: currentCard.ply,
+    verdict: currentCard.verdict,
+    tags: currentCard.tags,
+    status: getScheduleStatus(currentCard, successRate, skippedRecently, now),
+    priorityScore: Math.max(0, reasons.reduce((total, reason) => total + reason.score, 0)),
+    attempts: currentCard.attempts,
+    correct: currentCard.correct,
+    successRate,
+    lastReviewedAt: currentCard.lastReviewedAt,
+    lastAttemptResult: lastAttempt?.result,
+    skippedRecently,
+    openingBucketIds,
+    reasons,
+  };
+}
+
+function getScheduleStatus(currentCard, successRate, skippedRecently, now) {
+  const lastAttempt = currentCard.attemptHistory.at(-1);
+
+  if (currentCard.attempts === 0) return "new";
+  if (lastAttempt?.result === "missed") return "due-now";
+  if (skippedRecently || (currentCard.attempts >= 2 && successRate < 50)) return "due-soon";
+  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, now)) return "stable";
+  return "stable";
+}
+
+function wasSkippedRecently(cardId, summaries, now) {
+  return summaries.some((summary) =>
+    summary.results?.some(
+      (result) =>
+        result.cardId === cardId &&
+        result.result === "skipped" &&
+        daysBetween(result.recordedAt, now) <= 14,
+    ),
+  );
+}
+
+function isRememberedRecently(result, lastReviewedAt, now) {
+  return result === "remembered" && Boolean(lastReviewedAt) && daysBetween(lastReviewedAt, now) <= 3;
+}
+
+function daysBetween(value, now) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return Number.POSITIVE_INFINITY;
+  return Math.max(0, (now.getTime() - date.getTime()) / 86_400_000);
+}
+
+function getOpeningBucketIdsByCard(openingMap) {
+  const bucketIdsByCard = new Map();
+  for (const bucket of openingMap?.buckets ?? []) {
+    for (const cardId of bucket.cardIds) {
+      bucketIdsByCard.set(cardId, [...(bucketIdsByCard.get(cardId) ?? []), bucket.id]);
+    }
+  }
+  return bucketIdsByCard;
+}
+
+function getScheduleRecommendation(dueNowItems, dueSoonItems, newItems, allItems) {
+  if (allItems.length === 0) return "Create mistake cards to build a review schedule.";
+  if (dueNowItems.length > 0) return `Start with ${dueNowItems.length} due-now card${dueNowItems.length === 1 ? "" : "s"}.`;
+  if (dueSoonItems.length > 0) {
+    return `Review ${dueSoonItems.length} due-soon card${dueSoonItems.length === 1 ? "" : "s"} before they cool off.`;
+  }
+  if (newItems.length > 0) return `Introduce ${newItems.length} new card${newItems.length === 1 ? "" : "s"} into review.`;
+  return "Your current review queue is stable.";
+}
+
+function buildDueReviewSession(cards, schedule) {
+  return buildReviewSession(
+    [...new Set(schedule.dueReviewCardIds)]
+      .map((cardId) => cards.find((currentCard) => currentCard.id === cardId))
+      .filter(Boolean),
+    { type: "due-review" },
+    "all",
+  );
+}
+
 function buildOpeningWeaknessTrend(openingMap, cards, sessionSummaries) {
   const openingCardIds = new Set(openingMap.signals.map((signal) => signal.cardId));
   const cardsById = new Map(cards.filter((currentCard) => openingCardIds.has(currentCard.id)).map((currentCard) => [currentCard.id, currentCard]));
@@ -2621,6 +2775,123 @@ const trendFocusSession = buildReviewSession(
   "all",
 );
 assert.deepEqual(trendFocusSession.selectedCardIds, ["trend-plan-card"]);
+
+const scheduleNow = new Date("2026-07-03T12:00:00.000Z");
+const scheduleCards = [
+  {
+    ...manualReviewed,
+    id: "schedule-new-card",
+    moveSan: "Nf3",
+    verdict: "mistake",
+    tags: ["missed tactic"],
+    attempts: 0,
+    correct: 0,
+    lastReviewedAt: undefined,
+    attemptHistory: [],
+  },
+  {
+    ...manualReviewed,
+    id: "schedule-missed-card",
+    moveSan: "Bxf7+",
+    verdict: "blunder",
+    tags: ["missed tactic"],
+    attempts: 1,
+    correct: 0,
+    lastReviewedAt: "2026-07-03T10:00:00.000Z",
+    attemptHistory: [
+      {
+        id: "schedule-missed-attempt",
+        attemptedAt: "2026-07-03T10:00:00.000Z",
+        expectedMoveSan: "Bxf7+",
+        result: "missed",
+        method: "manual-reveal",
+      },
+    ],
+  },
+  {
+    ...manualReviewed,
+    id: "schedule-stable-card",
+    moveSan: "O-O",
+    verdict: "good",
+    tags: [],
+    attempts: 1,
+    correct: 1,
+    lastReviewedAt: "2026-07-02T10:00:00.000Z",
+    attemptHistory: [
+      {
+        id: "schedule-stable-attempt",
+        attemptedAt: "2026-07-02T10:00:00.000Z",
+        expectedMoveSan: "O-O",
+        result: "remembered",
+        method: "manual-reveal",
+      },
+    ],
+  },
+  {
+    ...manualReviewed,
+    id: "schedule-low-rate-card",
+    moveSan: "Nxd5",
+    verdict: "mistake",
+    tags: ["bad trade"],
+    attempts: 4,
+    correct: 1,
+    lastReviewedAt: "2026-06-30T10:00:00.000Z",
+    attemptHistory: [
+      {
+        id: "schedule-low-rate-attempt",
+        attemptedAt: "2026-06-30T10:00:00.000Z",
+        expectedMoveSan: "Nxd5",
+        result: "remembered",
+        method: "manual-reveal",
+      },
+    ],
+  },
+  {
+    ...manualReviewed,
+    id: "schedule-skipped-card",
+    moveSan: "Kh1",
+    verdict: "mistake",
+    tags: ["king safety"],
+    attempts: 1,
+    correct: 1,
+    lastReviewedAt: "2026-07-01T10:00:00.000Z",
+    attemptHistory: [
+      {
+        id: "schedule-skipped-attempt",
+        attemptedAt: "2026-07-01T10:00:00.000Z",
+        expectedMoveSan: "Kh1",
+        result: "remembered",
+        method: "manual-reveal",
+      },
+    ],
+  },
+];
+const scheduleSkipSummary = {
+  ...sessionSummary,
+  id: "schedule-skip-session",
+  results: [
+    {
+      cardId: "schedule-skipped-card",
+      result: "skipped",
+      recordedAt: "2026-07-02T10:00:00.000Z",
+    },
+  ],
+};
+const reviewSchedule = buildReviewSchedule(scheduleCards, [scheduleSkipSummary], undefined, scheduleNow);
+const scheduleStatusById = Object.fromEntries(reviewSchedule.items.map((item) => [item.cardId, item.status]));
+assert.equal(scheduleStatusById["schedule-new-card"], "new");
+assert.equal(scheduleStatusById["schedule-missed-card"], "due-now");
+assert.equal(scheduleStatusById["schedule-stable-card"], "stable");
+assert.equal(scheduleStatusById["schedule-low-rate-card"], "due-soon");
+assert.equal(scheduleStatusById["schedule-skipped-card"], "due-soon");
+assert.equal(reviewSchedule.topPriorityItems[0].cardId, "schedule-missed-card");
+assert.deepEqual(reviewSchedule.dueReviewCardIds, ["schedule-missed-card"]);
+assert.deepEqual(buildDueReviewSession(scheduleCards, reviewSchedule).selectedCardIds, ["schedule-missed-card"]);
+const newOnlySchedule = buildReviewSchedule([scheduleCards[0]], [], undefined, scheduleNow);
+assert.deepEqual(newOnlySchedule.dueReviewCardIds, ["schedule-new-card"]);
+const emptySchedule = buildReviewSchedule([], [], undefined, scheduleNow);
+assert.equal(emptySchedule.items.length, 0);
+assert.match(emptySchedule.recommendedNextAction, /Create mistake cards/i);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",

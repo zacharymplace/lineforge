@@ -5,6 +5,7 @@ import {
   getSessionDashboardStats,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
+import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 import type { OpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
 import type { OpeningWeaknessTrend } from "@/lib/mistake-graph/opening-weakness-trends";
 
@@ -13,6 +14,7 @@ type MistakeDashboardProps = {
   sessionSummaries: ReviewSessionSummary[];
   openingMap: OpeningWeaknessMap;
   openingTrend: OpeningWeaknessTrend;
+  reviewSchedule: ReviewScheduleSummary;
 };
 
 export function MistakeDashboard({
@@ -20,6 +22,7 @@ export function MistakeDashboard({
   sessionSummaries,
   openingMap,
   openingTrend,
+  reviewSchedule,
 }: MistakeDashboardProps) {
   const sessionStats = getSessionDashboardStats(sessionSummaries);
 
@@ -108,6 +111,19 @@ export function MistakeDashboard({
         <div className="rounded-md bg-stone-950 px-3 py-2 text-sm text-stone-300">
           <span className="text-stone-500">Recommended focus: </span>
           {openingTrend.summary.recommendedNextFocus}
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-md bg-black/30 p-3">
+        <div>
+          <div className="text-sm font-medium text-stone-100">Review schedule</div>
+          <div className="text-xs text-stone-500">
+            {reviewSchedule.dueNowCount} due now · {reviewSchedule.dueSoonCount} due soon
+          </div>
+        </div>
+        <div className="rounded-md bg-stone-950 px-3 py-2 text-sm text-stone-300">
+          <span className="text-stone-500">Next action: </span>
+          {reviewSchedule.recommendedNextAction}
         </div>
       </div>
 

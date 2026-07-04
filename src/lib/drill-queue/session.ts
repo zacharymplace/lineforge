@@ -13,7 +13,8 @@ export type ReviewSessionFilter =
   | { type: "lowest-success-rate" }
   | { type: "most-recent" }
   | { type: "missed-only-repeat"; sourceSessionId: string }
-  | { type: "opening-weakness"; bucketId: string };
+  | { type: "opening-weakness"; bucketId: string }
+  | { type: "due-review" };
 
 export type ReviewSessionCard = {
   cardId: string;
@@ -114,6 +115,10 @@ export function buildReviewSession(
 
 export function filterSessionCards(cards: MistakeCard[], filter: ReviewSessionFilter) {
   if (filter.type === "missed-only-repeat") {
+    return cards;
+  }
+
+  if (filter.type === "due-review") {
     return cards;
   }
 
@@ -342,6 +347,7 @@ export function getReviewSessionFilterLabel(filter: ReviewSessionFilter) {
   if (filter.type === "most-recent") return "Most recent cards";
   if (filter.type === "missed-only-repeat") return "Missed-only repeat";
   if (filter.type === "opening-weakness") return `Opening weakness: ${filter.bucketId}`;
+  if (filter.type === "due-review") return "Due review";
   return "All cards";
 }
 

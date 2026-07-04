@@ -27,6 +27,7 @@ import {
   saveReviewSessionSummary,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
+import { buildReviewSchedule } from "@/lib/drill-queue/schedule";
 import {
   attachAnalysisToAnnotation,
   attachAnalysisToCard,
@@ -136,6 +137,10 @@ export function LineForgeApp() {
   );
   const openingTrend = useMemo(
     () => buildOpeningWeaknessTrend(openingMap, cards, sessionSummaries),
+    [cards, openingMap, sessionSummaries],
+  );
+  const reviewSchedule = useMemo(
+    () => buildReviewSchedule(cards, sessionSummaries, openingMap),
     [cards, openingMap, sessionSummaries],
   );
   const isDraftGame = !isGameSaved(library, game.id);
@@ -548,11 +553,13 @@ export function LineForgeApp() {
           sessionSummaries={sessionSummaries}
           openingMap={openingMap}
           openingTrend={openingTrend}
+          reviewSchedule={reviewSchedule}
         />
         <ReviewSessionPanel
           cards={cards}
           comparisonLensIds={comparisonLensIds}
           sessionSummaries={sessionSummaries}
+          reviewSchedule={reviewSchedule}
           openingMap={openingMap}
           openingTrend={openingTrend}
           activeGameId={isDraftGame ? null : game.id}

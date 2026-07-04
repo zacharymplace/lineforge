@@ -5,9 +5,11 @@ import { Chessboard } from "react-chessboard";
 import { CoachLensComparison } from "./CoachLensComparison";
 import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
 import { OpeningWeaknessTrendPanel } from "./OpeningWeaknessTrendPanel";
+import { ReviewSchedulePanel } from "./ReviewSchedulePanel";
 import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
+import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 import {
   loadReviewSessionSizePreference,
   saveReviewSessionSizePreference,
@@ -47,6 +49,7 @@ type ReviewSessionPanelProps = {
   cards: MistakeCard[];
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
+  reviewSchedule?: ReviewScheduleSummary;
   openingMap?: OpeningWeaknessMap;
   openingTrend?: OpeningWeaknessTrend;
   activeGameId?: string | null;
@@ -55,12 +58,16 @@ type ReviewSessionPanelProps = {
   onClearSessionHistory?: () => void;
 };
 
-type FilterKind = Exclude<ReviewSessionFilter["type"], "missed-only-repeat" | "opening-weakness">;
+type FilterKind = Exclude<
+  ReviewSessionFilter["type"],
+  "missed-only-repeat" | "opening-weakness" | "due-review"
+>;
 
 export function ReviewSessionPanel({
   cards,
   comparisonLensIds,
   sessionSummaries = [],
+  reviewSchedule,
   openingMap,
   openingTrend,
   activeGameId,
@@ -113,6 +120,12 @@ export function ReviewSessionPanel({
 
   function startOpeningTrendBucketSession(bucket: OpeningWeaknessTrendBucket) {
     startOpeningWeaknessCardIdsSession(bucket.cardIds, bucket.bucketId);
+  }
+
+  function startDueReviewSession(cardIds: string[]) {
+    const nextSession = buildReviewSessionFromCardIds(cards, cardIds, { type: "due-review" });
+    setSession(nextSession);
+    setLastSummary(null);
   }
 
   function recordResult(
@@ -348,6 +361,12 @@ export function ReviewSessionPanel({
         <OpeningWeaknessTrendPanel
           trend={openingTrend}
           onStartBucketReview={startOpeningTrendBucketSession}
+        />
+      ) : null}
+      {reviewSchedule ? (
+        <ReviewSchedulePanel
+          schedule={reviewSchedule}
+          onStartDueReview={startDueReviewSession}
         />
       ) : null}
       <ReviewSessionHistoryPanel
