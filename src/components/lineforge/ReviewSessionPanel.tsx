@@ -11,6 +11,10 @@ import { ScheduleBadge } from "./ScheduleBadge";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
 import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
+import type {
+  ReviewScheduleIntervalPreset,
+  ReviewSchedulePreferences,
+} from "@/lib/drill-queue/schedule-preferences";
 import {
   loadReviewSessionSizePreference,
   saveReviewSessionSizePreference,
@@ -51,6 +55,8 @@ type ReviewSessionPanelProps = {
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
   reviewSchedule?: ReviewScheduleSummary;
+  schedulePreferences: ReviewSchedulePreferences;
+  onSchedulePresetChange: (preset: ReviewScheduleIntervalPreset) => void;
   openingMap?: OpeningWeaknessMap;
   openingTrend?: OpeningWeaknessTrend;
   activeGameId?: string | null;
@@ -69,6 +75,8 @@ export function ReviewSessionPanel({
   comparisonLensIds,
   sessionSummaries = [],
   reviewSchedule,
+  schedulePreferences,
+  onSchedulePresetChange,
   openingMap,
   openingTrend,
   activeGameId,
@@ -375,6 +383,8 @@ export function ReviewSessionPanel({
       {reviewSchedule ? (
         <ReviewSchedulePanel
           schedule={reviewSchedule}
+          preferences={schedulePreferences}
+          onPresetChange={onSchedulePresetChange}
           onStartDueReview={startDueReviewSession}
         />
       ) : null}

@@ -1,4 +1,9 @@
 import type { ReviewSessionSummary } from "@/lib/drill-queue/session";
+import {
+  getDefaultReviewSchedulePreferences,
+  normalizeReviewSchedulePreferences,
+  type ReviewSchedulePreferences,
+} from "@/lib/drill-queue/schedule-preferences";
 import type {
   MistakeCard,
   MistakeTag,
@@ -70,7 +75,8 @@ export type ReviewScheduleRule = {
     | "remembered-recently"
     | "important-verdict"
     | "important-tag"
-    | "recently-skipped";
+    | "recently-skipped"
+    | "stale-review";
   label: string;
   score: number;
 };
@@ -106,23 +112,27 @@ export type ReviewScheduleSummary = {
 };
 
 const IMPORTANT_TAGS: MistakeTag[] = ["missed tactic", "king safety", "hung piece"];
-const RECENT_REMEMBERED_STABLE_DAYS = 3;
-const RECENT_SKIP_DAYS = 14;
-
 export function buildReviewSchedule(
   cards: MistakeCard[],
   sessionSummaries: ReviewSessionSummary[] = [],
   openingMap?: OpeningWeaknessMap,
+  preferencesOrNow: ReviewSchedulePreferences | Date = getDefaultReviewSchedulePreferences(),
   now = new Date(),
 ): ReviewScheduleSummary {
+  const preferences =
+    preferencesOrNow instanceof Date
+      ? getDefaultReviewSchedulePreferences()
+      : normalizeReviewSchedulePreferences(preferencesOrNow);
+  const scheduleNow = preferencesOrNow instanceof Date ? preferencesOrNow : now;
   const openingBucketIdsByCard = getOpeningBucketIdsByCard(openingMap);
   const items = cards
     .map((card) =>
       buildReviewScheduleItem(
         card,
-        wasSkippedRecently(card.id, sessionSummaries, now),
+        wasSkippedRecently(card.id, sessionSummaries, preferences, scheduleNow),
         openingBucketIdsByCard.get(card.id) ?? [],
-        now,
+        preferences,
+        scheduleNow,
       ),
     )
     .sort((a, b) => b.priorityScore - a.priorityScore || b.ply - a.ply);
@@ -133,7 +143,7 @@ export function buildReviewSchedule(
   const dueReviewItems = dueNowItems.length ? dueNowItems : dueSoonItems.length ? dueSoonItems : newItems;
 
   return {
-    generatedAt: now.toISOString(),
+    generatedAt: scheduleNow.toISOString(),
     items,
     dueNowCount: dueNowItems.length,
     dueSoonCount: dueSoonItems.length,
@@ -414,6 +424,7 @@ function buildReviewScheduleItem(
   card: MistakeCard,
   skippedRecently: boolean,
   openingBucketIds: string[],
+  preferences: ReviewSchedulePreferences,
   now: Date,
 ): ReviewScheduleItem {
   const lastAttempt = card.attemptHistory.at(-1);
@@ -436,7 +447,7 @@ function buildReviewScheduleItem(
     });
   }
 
-  if (card.attempts >= 2 && successRate < 50) {
+  if (card.attempts >= 2 && successRate < preferences.lowSuccessThreshold) {
     reasons.push({
       id: "low-success-rate",
       label: `Low success rate (${successRate}%)`,
@@ -444,7 +455,7 @@ function buildReviewScheduleItem(
     });
   }
 
-  if (isRememberedRecently(lastAttempt?.result, card.lastReviewedAt, now)) {
+  if (isRememberedRecently(lastAttempt?.result, card.lastReviewedAt, preferences, now)) {
     reasons.push({
       id: "remembered-recently",
       label: "Remembered recently",
@@ -478,13 +489,21 @@ function buildReviewScheduleItem(
     });
   }
 
+  if (isStaleReview(card.lastReviewedAt, preferences, now)) {
+    reasons.push({
+      id: "stale-review",
+      label: `Not reviewed in ${preferences.staleDays}+ days`,
+      score: preferences.staleCardStatus === "due-soon" ? 15 : 0,
+    });
+  }
+
   return {
     cardId: card.id,
     moveSan: card.moveSan,
     ply: card.ply,
     verdict: card.verdict,
     tags: card.tags,
-    status: getScheduleStatus(card, successRate, skippedRecently, now),
+    status: getScheduleStatus(card, successRate, skippedRecently, preferences, now),
     priorityScore: Math.max(0, reasons.reduce((total, reason) => total + reason.score, 0)),
     attempts: card.attempts,
     correct: card.correct,
@@ -501,6 +520,7 @@ function getScheduleStatus(
   card: MistakeCard,
   successRate: number,
   skippedRecently: boolean,
+  preferences: ReviewSchedulePreferences,
   now: Date,
 ): ReviewScheduleStatus {
   const lastAttempt = card.attemptHistory.at(-1);
@@ -510,27 +530,40 @@ function getScheduleStatus(
   }
 
   if (lastAttempt?.result === "missed") {
-    return "due-now";
+    return preferences.missedLastAttemptStatus;
   }
 
-  if (skippedRecently || (card.attempts >= 2 && successRate < 50)) {
-    return "due-soon";
+  if (skippedRecently) {
+    return preferences.skippedRecentlyStatus;
   }
 
-  if (isRememberedRecently(lastAttempt?.result, card.lastReviewedAt, now)) {
+  if (card.attempts >= 2 && successRate < preferences.lowSuccessThreshold) {
+    return preferences.lowSuccessStatus;
+  }
+
+  if (isRememberedRecently(lastAttempt?.result, card.lastReviewedAt, preferences, now)) {
     return "stable";
+  }
+
+  if (isStaleReview(card.lastReviewedAt, preferences, now)) {
+    return preferences.staleCardStatus;
   }
 
   return "stable";
 }
 
-function wasSkippedRecently(cardId: string, summaries: ReviewSessionSummary[], now: Date) {
+function wasSkippedRecently(
+  cardId: string,
+  summaries: ReviewSessionSummary[],
+  preferences: ReviewSchedulePreferences,
+  now: Date,
+) {
   return summaries.some((summary) =>
     summary.results?.some(
       (result) =>
         result.cardId === cardId &&
         result.result === "skipped" &&
-        daysBetween(result.recordedAt, now) <= RECENT_SKIP_DAYS,
+        daysBetween(result.recordedAt, now) <= preferences.skippedRecentDays,
     ),
   );
 }
@@ -538,13 +571,22 @@ function wasSkippedRecently(cardId: string, summaries: ReviewSessionSummary[], n
 function isRememberedRecently(
   lastAttemptResult: ReviewResult | undefined,
   lastReviewedAt: string | undefined,
+  preferences: ReviewSchedulePreferences,
   now: Date,
 ) {
   return (
     lastAttemptResult === "remembered" &&
     Boolean(lastReviewedAt) &&
-    daysBetween(lastReviewedAt, now) <= RECENT_REMEMBERED_STABLE_DAYS
+    daysBetween(lastReviewedAt, now) <= preferences.rememberedStableDays
   );
+}
+
+function isStaleReview(
+  lastReviewedAt: string | undefined,
+  preferences: ReviewSchedulePreferences,
+  now: Date,
+) {
+  return Boolean(lastReviewedAt) && daysBetween(lastReviewedAt, now) >= preferences.staleDays;
 }
 
 function daysBetween(value: string | undefined, now: Date) {

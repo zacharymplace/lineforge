@@ -27,6 +27,13 @@ import {
   saveReviewSessionSummary,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
+import {
+  getDefaultReviewSchedulePreferences,
+  loadReviewSchedulePreferences,
+  saveReviewSchedulePreferences,
+  type ReviewScheduleIntervalPreset,
+  type ReviewSchedulePreferences,
+} from "@/lib/drill-queue/schedule-preferences";
 import { buildReviewSchedule } from "@/lib/drill-queue/schedule";
 import {
   attachAnalysisToAnnotation,
@@ -84,6 +91,9 @@ export function LineForgeApp() {
   const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
     DEFAULT_COACH_LENS_COMPARISON_IDS,
   );
+  const [schedulePreferences, setSchedulePreferences] = useState<ReviewSchedulePreferences>(
+    () => getDefaultReviewSchedulePreferences(),
+  );
   const [storageMessages, setStorageMessages] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -106,6 +116,7 @@ export function LineForgeApp() {
       setSelectedCardId(storedCards[0]?.id ?? null);
       setSessionSummaries(loadReviewSessionSummaries());
       setComparisonLensIds(loadComparisonLensPreference());
+      setSchedulePreferences(loadReviewSchedulePreferences());
       setStorageMessages(consumeStorageWarnings().map((warning) => warning.message));
       setHydrated(true);
     });
@@ -140,8 +151,8 @@ export function LineForgeApp() {
     [cards, openingMap, sessionSummaries],
   );
   const reviewSchedule = useMemo(
-    () => buildReviewSchedule(cards, sessionSummaries, openingMap),
-    [cards, openingMap, sessionSummaries],
+    () => buildReviewSchedule(cards, sessionSummaries, openingMap, schedulePreferences),
+    [cards, openingMap, schedulePreferences, sessionSummaries],
   );
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
@@ -420,6 +431,10 @@ export function LineForgeApp() {
     setComparisonLensIds(saveComparisonLensPreference(lensIds));
   }
 
+  function handleSchedulePresetChange(preset: ReviewScheduleIntervalPreset) {
+    setSchedulePreferences(saveReviewSchedulePreferences(preset));
+  }
+
   function handleExportBackup() {
     return serializeBackup(createBackup(upsertSavedGame(library, game, game.name), cards));
   }
@@ -561,6 +576,8 @@ export function LineForgeApp() {
           comparisonLensIds={comparisonLensIds}
           sessionSummaries={sessionSummaries}
           reviewSchedule={reviewSchedule}
+          schedulePreferences={schedulePreferences}
+          onSchedulePresetChange={handleSchedulePresetChange}
           openingMap={openingMap}
           openingTrend={openingTrend}
           activeGameId={isDraftGame ? null : game.id}

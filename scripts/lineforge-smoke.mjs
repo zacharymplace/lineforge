@@ -1101,16 +1101,114 @@ function buildOpeningWeaknessVisibleReviewSession(cards, signals) {
 }
 
 const importantScheduleTags = ["missed tactic", "king safety", "hung piece"];
+const reviewSchedulePreferenceKey = "lineforge.drillQueue.schedulePreferences.v1";
+const reviewScheduleIntervalPresets = ["gentle", "standard", "intense"];
+const standardReviewSchedulePreferences = {
+  preset: "standard",
+  missedLastAttemptStatus: "due-now",
+  skippedRecentlyStatus: "due-soon",
+  lowSuccessStatus: "due-soon",
+  staleCardStatus: "stable",
+  rememberedStableDays: 3,
+  skippedRecentDays: 14,
+  staleDays: 7,
+  lowSuccessThreshold: 50,
+};
+const reviewSchedulePresetValues = {
+  gentle: {
+    preset: "gentle",
+    missedLastAttemptStatus: "due-soon",
+    skippedRecentlyStatus: "due-soon",
+    lowSuccessStatus: "stable",
+    staleCardStatus: "stable",
+    rememberedStableDays: 5,
+    skippedRecentDays: 10,
+    staleDays: 14,
+    lowSuccessThreshold: 35,
+  },
+  standard: standardReviewSchedulePreferences,
+  intense: {
+    preset: "intense",
+    missedLastAttemptStatus: "due-now",
+    skippedRecentlyStatus: "due-now",
+    lowSuccessStatus: "due-soon",
+    staleCardStatus: "due-soon",
+    rememberedStableDays: 1,
+    skippedRecentDays: 21,
+    staleDays: 3,
+    lowSuccessThreshold: 70,
+  },
+};
 
-function buildReviewSchedule(cards, sessionSummaries = [], openingMap, now = new Date()) {
+function getDefaultReviewSchedulePreferences() {
+  return { ...standardReviewSchedulePreferences };
+}
+
+function isValidReviewScheduleIntervalPreset(value) {
+  return reviewScheduleIntervalPresets.includes(value);
+}
+
+function getReviewSchedulePresetPreferences(preset) {
+  return { ...reviewSchedulePresetValues[preset] };
+}
+
+function normalizeReviewSchedulePreferences(value) {
+  if (isValidReviewScheduleIntervalPreset(value)) {
+    return getReviewSchedulePresetPreferences(value);
+  }
+
+  if (!value || typeof value !== "object") {
+    return getDefaultReviewSchedulePreferences();
+  }
+
+  return isValidReviewScheduleIntervalPreset(value.preset)
+    ? getReviewSchedulePresetPreferences(value.preset)
+    : getDefaultReviewSchedulePreferences();
+}
+
+function loadReviewSchedulePreferences(storage) {
+  if (!storage) return getDefaultReviewSchedulePreferences();
+
+  try {
+    return normalizeReviewSchedulePreferences(
+      JSON.parse(storage.getItem(reviewSchedulePreferenceKey) ?? "null"),
+    );
+  } catch {
+    return getDefaultReviewSchedulePreferences();
+  }
+}
+
+function saveReviewSchedulePreferences(value, storage) {
+  const preferences = normalizeReviewSchedulePreferences(value);
+  storage?.setItem(reviewSchedulePreferenceKey, JSON.stringify(preferences));
+  return preferences;
+}
+
+function resetReviewSchedulePreferences(storage) {
+  return saveReviewSchedulePreferences(getDefaultReviewSchedulePreferences(), storage);
+}
+
+function buildReviewSchedule(
+  cards,
+  sessionSummaries = [],
+  openingMap,
+  preferencesOrNow = getDefaultReviewSchedulePreferences(),
+  now = new Date(),
+) {
+  const preferences =
+    preferencesOrNow instanceof Date
+      ? getDefaultReviewSchedulePreferences()
+      : normalizeReviewSchedulePreferences(preferencesOrNow);
+  const scheduleNow = preferencesOrNow instanceof Date ? preferencesOrNow : now;
   const openingBucketIdsByCard = getOpeningBucketIdsByCard(openingMap);
   const items = cards
     .map((currentCard) =>
       buildReviewScheduleItem(
         currentCard,
-        wasSkippedRecently(currentCard.id, sessionSummaries, now),
+        wasSkippedRecently(currentCard.id, sessionSummaries, preferences, scheduleNow),
         openingBucketIdsByCard.get(currentCard.id) ?? [],
-        now,
+        preferences,
+        scheduleNow,
       ),
     )
     .sort((a, b) => b.priorityScore - a.priorityScore || b.ply - a.ply);
@@ -1121,7 +1219,7 @@ function buildReviewSchedule(cards, sessionSummaries = [], openingMap, now = new
   const dueReviewItems = dueNowItems.length ? dueNowItems : dueSoonItems.length ? dueSoonItems : newItems;
 
   return {
-    generatedAt: now.toISOString(),
+    generatedAt: scheduleNow.toISOString(),
     items,
     dueNowCount: dueNowItems.length,
     dueSoonCount: dueSoonItems.length,
@@ -1133,7 +1231,7 @@ function buildReviewSchedule(cards, sessionSummaries = [], openingMap, now = new
   };
 }
 
-function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds, now) {
+function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds, preferences, now) {
   const lastAttempt = currentCard.attemptHistory.at(-1);
   const successRate =
     currentCard.attempts > 0 ? Math.round((currentCard.correct / currentCard.attempts) * 100) : 0;
@@ -1147,11 +1245,11 @@ function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds,
     reasons.push({ id: "missed-last", label: "Missed last attempt", score: 70 });
   }
 
-  if (currentCard.attempts >= 2 && successRate < 50) {
+  if (currentCard.attempts >= 2 && successRate < preferences.lowSuccessThreshold) {
     reasons.push({ id: "low-success-rate", label: `Low success rate (${successRate}%)`, score: 30 });
   }
 
-  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, now)) {
+  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, preferences, now)) {
     reasons.push({ id: "remembered-recently", label: "Remembered recently", score: -20 });
   }
 
@@ -1173,13 +1271,21 @@ function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds,
     reasons.push({ id: "recently-skipped", label: "Skipped in a recent session", score: 25 });
   }
 
+  if (isStaleReview(currentCard.lastReviewedAt, preferences, now)) {
+    reasons.push({
+      id: "stale-review",
+      label: `Not reviewed in ${preferences.staleDays}+ days`,
+      score: preferences.staleCardStatus === "due-soon" ? 15 : 0,
+    });
+  }
+
   return {
     cardId: currentCard.id,
     moveSan: currentCard.moveSan,
     ply: currentCard.ply,
     verdict: currentCard.verdict,
     tags: currentCard.tags,
-    status: getScheduleStatus(currentCard, successRate, skippedRecently, now),
+    status: getScheduleStatus(currentCard, successRate, skippedRecently, preferences, now),
     priorityScore: Math.max(0, reasons.reduce((total, reason) => total + reason.score, 0)),
     attempts: currentCard.attempts,
     correct: currentCard.correct,
@@ -1192,29 +1298,41 @@ function buildReviewScheduleItem(currentCard, skippedRecently, openingBucketIds,
   };
 }
 
-function getScheduleStatus(currentCard, successRate, skippedRecently, now) {
+function getScheduleStatus(currentCard, successRate, skippedRecently, preferences, now) {
   const lastAttempt = currentCard.attemptHistory.at(-1);
 
   if (currentCard.attempts === 0) return "new";
-  if (lastAttempt?.result === "missed") return "due-now";
-  if (skippedRecently || (currentCard.attempts >= 2 && successRate < 50)) return "due-soon";
-  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, now)) return "stable";
+  if (lastAttempt?.result === "missed") return preferences.missedLastAttemptStatus;
+  if (skippedRecently) return preferences.skippedRecentlyStatus;
+  if (currentCard.attempts >= 2 && successRate < preferences.lowSuccessThreshold) {
+    return preferences.lowSuccessStatus;
+  }
+  if (isRememberedRecently(lastAttempt?.result, currentCard.lastReviewedAt, preferences, now)) return "stable";
+  if (isStaleReview(currentCard.lastReviewedAt, preferences, now)) return preferences.staleCardStatus;
   return "stable";
 }
 
-function wasSkippedRecently(cardId, summaries, now) {
+function wasSkippedRecently(cardId, summaries, preferences, now) {
   return summaries.some((summary) =>
     summary.results?.some(
       (result) =>
         result.cardId === cardId &&
         result.result === "skipped" &&
-        daysBetween(result.recordedAt, now) <= 14,
+        daysBetween(result.recordedAt, now) <= preferences.skippedRecentDays,
     ),
   );
 }
 
-function isRememberedRecently(result, lastReviewedAt, now) {
-  return result === "remembered" && Boolean(lastReviewedAt) && daysBetween(lastReviewedAt, now) <= 3;
+function isRememberedRecently(result, lastReviewedAt, preferences, now) {
+  return (
+    result === "remembered" &&
+    Boolean(lastReviewedAt) &&
+    daysBetween(lastReviewedAt, now) <= preferences.rememberedStableDays
+  );
+}
+
+function isStaleReview(lastReviewedAt, preferences, now) {
+  return Boolean(lastReviewedAt) && daysBetween(lastReviewedAt, now) >= preferences.staleDays;
 }
 
 function daysBetween(value, now) {
@@ -3113,10 +3231,62 @@ assert.equal(scheduleStatusById["schedule-missed-card"], "due-now");
 assert.equal(scheduleStatusById["schedule-stable-card"], "stable");
 assert.equal(scheduleStatusById["schedule-low-rate-card"], "due-soon");
 assert.equal(scheduleStatusById["schedule-skipped-card"], "due-soon");
+assert.equal(scheduleStatusById["schedule-old-card"], "stable");
 assert.equal(reviewSchedule.topPriorityItems[0].cardId, "schedule-missed-card");
 assert.deepEqual(reviewSchedule.dueReviewCardIds, ["schedule-missed-card"]);
 assert.deepEqual(buildDueReviewSession(scheduleCards, reviewSchedule).selectedCardIds, ["schedule-missed-card"]);
 const scheduleItemById = Object.fromEntries(reviewSchedule.items.map((item) => [item.cardId, item]));
+assert.deepEqual(getDefaultReviewSchedulePreferences(), standardReviewSchedulePreferences);
+const validSchedulePreferenceStorage = createMemoryStorage({
+  [reviewSchedulePreferenceKey]: JSON.stringify({ preset: "gentle" }),
+});
+assert.equal(loadReviewSchedulePreferences(validSchedulePreferenceStorage).preset, "gentle");
+const invalidSchedulePreferenceStorage = createMemoryStorage({
+  [reviewSchedulePreferenceKey]: JSON.stringify({ preset: "wild" }),
+});
+assert.deepEqual(loadReviewSchedulePreferences(invalidSchedulePreferenceStorage), standardReviewSchedulePreferences);
+const malformedSchedulePreferenceStorage = createMemoryStorage({
+  [reviewSchedulePreferenceKey]: "{ no",
+});
+assert.deepEqual(loadReviewSchedulePreferences(malformedSchedulePreferenceStorage), standardReviewSchedulePreferences);
+const missingSchedulePreferenceStorage = createMemoryStorage();
+assert.deepEqual(loadReviewSchedulePreferences(missingSchedulePreferenceStorage), standardReviewSchedulePreferences);
+assert.equal(saveReviewSchedulePreferences("intense", missingSchedulePreferenceStorage).preset, "intense");
+assert.equal(loadReviewSchedulePreferences(missingSchedulePreferenceStorage).preset, "intense");
+assert.deepEqual(resetReviewSchedulePreferences(missingSchedulePreferenceStorage), standardReviewSchedulePreferences);
+assert.equal(loadReviewSchedulePreferences(missingSchedulePreferenceStorage).preset, "standard");
+const standardExplicitSchedule = buildReviewSchedule(
+  scheduleCards,
+  [scheduleSkipSummary],
+  undefined,
+  standardReviewSchedulePreferences,
+  scheduleNow,
+);
+assert.deepEqual(
+  Object.fromEntries(standardExplicitSchedule.items.map((item) => [item.cardId, item.status])),
+  scheduleStatusById,
+);
+const gentleSchedule = buildReviewSchedule(
+  scheduleCards,
+  [scheduleSkipSummary],
+  undefined,
+  reviewSchedulePresetValues.gentle,
+  scheduleNow,
+);
+const gentleStatusById = Object.fromEntries(gentleSchedule.items.map((item) => [item.cardId, item.status]));
+assert.equal(gentleStatusById["schedule-missed-card"], "due-soon");
+assert.equal(gentleStatusById["schedule-low-rate-card"], "stable");
+const intenseSchedule = buildReviewSchedule(
+  scheduleCards,
+  [scheduleSkipSummary],
+  undefined,
+  reviewSchedulePresetValues.intense,
+  scheduleNow,
+);
+const intenseStatusById = Object.fromEntries(intenseSchedule.items.map((item) => [item.cardId, item.status]));
+assert.equal(intenseStatusById["schedule-skipped-card"], "due-now");
+assert.equal(intenseStatusById["schedule-old-card"], "due-soon");
+assert.equal(intenseStatusById["schedule-stable-card"], "stable");
 assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-missed-card"]), "Due now");
 assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-low-rate-card"]), "Due soon");
 assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-new-card"]), "New");
