@@ -487,6 +487,7 @@ export function LineForgeApp() {
               <span
                 key={message}
                 className="rounded-md border border-red-900 bg-red-950/60 px-3 py-1 text-red-100"
+                role="alert"
               >
                 {message}
               </span>

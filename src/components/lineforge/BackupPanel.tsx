@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { StatusHint } from "./StatusHint";
 
 type BackupPanelProps = {
   onExport: () => string;
@@ -57,11 +58,13 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
           onChange={(event) => void handleFile(event.target.files?.[0])}
         />
       </div>
-      {message ? (
-        <div className={`text-sm ${isError ? "text-red-200" : "text-stone-400"}`}>
+      {isError && message ? (
+        <div className="text-sm text-red-200" role="alert">
           {message}
         </div>
-      ) : null}
+      ) : (
+        <StatusHint message={message} className="text-sm text-stone-400" />
+      )}
     </section>
   );
 }

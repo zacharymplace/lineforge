@@ -21,6 +21,7 @@ import type {
 import { buildExplanationSummary } from "@/lib/explanations/templates";
 import type { MistakeCard } from "@/lib/move-ledger/types";
 import { ReviewSummary } from "./ReviewSummary";
+import { StatusHint } from "./StatusHint";
 
 type AnalysisTarget = "active" | "annotation" | "drill";
 
@@ -170,7 +171,9 @@ export function EngineAnalysisPanel({
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-stone-500">Status</span>
-          <span className="font-mono text-amber-100">{status}</span>
+          <span className="font-mono text-amber-100" role="status" aria-live="polite">
+            {status}
+          </span>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-stone-500">Depth</span>
@@ -229,10 +232,18 @@ export function EngineAnalysisPanel({
         </button>
       </div>
 
-      {error ? <div className="text-sm text-red-200">{error}</div> : null}
-      {confirmation ? <div className="text-sm text-emerald-200">{confirmation}</div> : null}
+      {error ? (
+        <div className="text-sm text-red-200" role="alert">
+          {error}
+        </div>
+      ) : null}
+      <StatusHint message={confirmation} className="text-sm text-emerald-200" />
       {isResultStale ? (
-        <div className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100">
+        <div
+          className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100"
+          role="status"
+          aria-live="polite"
+        >
           This result belongs to a previous FEN.
         </div>
       ) : null}

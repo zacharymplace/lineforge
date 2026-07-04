@@ -8,6 +8,7 @@ import {
   getPreviewPosition,
 } from "@/lib/move-ledger/import-preview";
 import type { LineForgeGame, PgnImportPreview } from "@/lib/move-ledger/types";
+import { StatusHint } from "./StatusHint";
 
 type GameImportPanelProps = {
   game: LineForgeGame;
@@ -98,17 +99,23 @@ export function GameImportPanel({
         <button className="lf-button-primary" onClick={handlePreview}>
           Preview PGN
         </button>
-        {message ? (
-          <span className={`text-sm ${isError ? "text-red-200" : "text-stone-400"}`}>
+        {isError && message ? (
+          <span className="text-sm text-red-200" role="alert">
             {message}
           </span>
-        ) : null}
+        ) : (
+          <StatusHint message={message} className="text-sm text-stone-400" />
+        )}
       </div>
 
       {preview ? (
         <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3 text-sm">
           {preview.warning ? (
-            <div className="rounded-md border border-amber-800 bg-amber-950/50 p-2 text-amber-100">
+            <div
+              className="rounded-md border border-amber-800 bg-amber-950/50 p-2 text-amber-100"
+              role="status"
+              aria-live="polite"
+            >
               {preview.warning}
             </div>
           ) : null}

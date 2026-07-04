@@ -156,7 +156,10 @@ export function MoveAnnotationPanel({
         </button>
       </div>
       {exportError ? (
-        <div className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100">
+        <div
+          className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100"
+          role="alert"
+        >
           {exportError}
         </div>
       ) : null}
