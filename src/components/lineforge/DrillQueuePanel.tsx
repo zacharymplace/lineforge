@@ -34,15 +34,19 @@ import { ReviewSummary } from "./ReviewSummary";
 import { ScheduleBadge } from "./ScheduleBadge";
 import { StatusHint } from "./StatusHint";
 import {
+  clearDrillQueueFilterChip,
   DEFAULT_DRILL_QUEUE_CARD_FILTER,
   DRILL_QUEUE_LAST_REVIEWED_FILTERS,
   DRILL_QUEUE_SCHEDULE_FILTERS,
   filterDrillQueueCards,
+  getActiveDrillQueueFilterChips,
   getDrillQueueScheduleFilterLabel,
   getLastReviewedFilterLabel,
   getSourceGameFilterLabel,
   getVisibleScheduleSelectedCardId,
   normalizeDrillQueueScheduleFilter,
+  type DrillQueueCardFilter,
+  type DrillQueueFilterChipId,
   type DrillQueueLastReviewedFilter,
   type DrillQueueScheduleFilter,
   type DrillQueueSourceGameFilter,
@@ -106,15 +110,22 @@ export function DrillQueuePanel({
         (sourceGameNames?.[firstId] ?? firstId).localeCompare(sourceGameNames?.[secondId] ?? secondId),
       );
   }, [cards, sourceGameNames]);
+  const drillQueueCardFilter = useMemo<DrillQueueCardFilter>(
+    () => ({
+      scheduleFilter,
+      sourceGameFilter,
+      lastReviewedFilter,
+      activeGameId,
+    }),
+    [activeGameId, lastReviewedFilter, scheduleFilter, sourceGameFilter],
+  );
+  const activeFilterChips = useMemo(
+    () => getActiveDrillQueueFilterChips(drillQueueCardFilter, sourceGameNames),
+    [drillQueueCardFilter, sourceGameNames],
+  );
   const visibleCards = useMemo(
-    () =>
-      filterDrillQueueCards(cards, reviewSchedule, {
-        scheduleFilter,
-        sourceGameFilter,
-        lastReviewedFilter,
-        activeGameId,
-      }),
-    [activeGameId, cards, lastReviewedFilter, reviewSchedule, scheduleFilter, sourceGameFilter],
+    () => filterDrillQueueCards(cards, reviewSchedule, drillQueueCardFilter),
+    [cards, drillQueueCardFilter, reviewSchedule],
   );
   const visibleSelectedCardId = getVisibleScheduleSelectedCardId(visibleCards, selectedCardId);
   const selectedCard = visibleSelectedCardId
@@ -207,6 +218,22 @@ export function DrillQueuePanel({
     showSavedMessage();
   }
 
+  function handleClearFilterChip(chipId: DrillQueueFilterChipId) {
+    const nextFilter = clearDrillQueueFilterChip(drillQueueCardFilter, chipId);
+
+    if (nextFilter.scheduleFilter !== scheduleFilter) {
+      setScheduleFilter(
+        normalizeDrillQueueScheduleFilter(
+          saveDrillQueueScheduleFilterPreference(nextFilter.scheduleFilter),
+        ),
+      );
+      showSavedMessage();
+    }
+
+    setSourceGameFilter(nextFilter.sourceGameFilter);
+    setLastReviewedFilter(nextFilter.lastReviewedFilter);
+  }
+
   function showSavedMessage() {
     setSavedMessage((currentMessage) => {
       const nextMessage = createTransientMessageState("Filter saved locally", currentMessage);
@@ -288,6 +315,26 @@ export function DrillQueuePanel({
             <div>
               Filters: {activeFilterLabels.join(" · ")} · {visibleCards.length} of {cards.length} cards
             </div>
+            {activeFilterChips.length > 0 ? (
+              <div className="flex flex-wrap gap-1" aria-label="Active DrillQueue filters">
+                {activeFilterChips.map((chip) => (
+                  <span
+                    key={chip.id}
+                    className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-900 px-2 py-1 text-[11px] text-stone-300"
+                  >
+                    {chip.label}
+                    <button
+                      className="text-stone-500 hover:text-stone-100"
+                      type="button"
+                      aria-label={`Clear ${chip.label} filter`}
+                      onClick={() => handleClearFilterChip(chip.id)}
+                    >
+                      x
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <button className="lf-button w-fit text-xs" onClick={handleResetFilters}>
               Reset filters
             </button>

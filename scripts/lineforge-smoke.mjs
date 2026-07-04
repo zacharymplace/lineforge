@@ -1309,6 +1309,59 @@ function getLastReviewedFilterLabel(filter) {
   return "Not reviewed in 7+ days";
 }
 
+function getActiveDrillQueueFilterChips(filter, sourceGameNames = {}) {
+  const chips = [];
+
+  if (filter.scheduleFilter !== defaultDrillQueueCardFilter.scheduleFilter) {
+    chips.push({ id: "schedule", label: getDrillQueueScheduleFilterChipLabel(filter.scheduleFilter) });
+  }
+
+  if (filter.sourceGameFilter !== defaultDrillQueueCardFilter.sourceGameFilter) {
+    chips.push({ id: "source-game", label: getSourceGameFilterChipLabel(filter.sourceGameFilter, sourceGameNames) });
+  }
+
+  if (filter.lastReviewedFilter !== defaultDrillQueueCardFilter.lastReviewedFilter) {
+    chips.push({ id: "last-reviewed", label: getLastReviewedFilterChipLabel(filter.lastReviewedFilter) });
+  }
+
+  return chips;
+}
+
+function clearDrillQueueFilterChip(filter, chipId) {
+  if (chipId === "schedule") {
+    return { ...filter, scheduleFilter: defaultDrillQueueCardFilter.scheduleFilter };
+  }
+
+  if (chipId === "source-game") {
+    return { ...filter, sourceGameFilter: defaultDrillQueueCardFilter.sourceGameFilter };
+  }
+
+  return { ...filter, lastReviewedFilter: defaultDrillQueueCardFilter.lastReviewedFilter };
+}
+
+function getDrillQueueScheduleFilterChipLabel(filter) {
+  if (filter === "due-now") return "Due now";
+  if (filter === "due-soon") return "Upcoming";
+  if (filter === "stable") return "Later";
+  if (filter === "high-priority") return "Blocked";
+  return "All";
+}
+
+function getLastReviewedFilterChipLabel(filter) {
+  if (filter === "never-reviewed") return "Never reviewed";
+  if (filter === "reviewed-today") return "Reviewed today";
+  if (filter === "reviewed-last-7-days") return "Reviewed last 7 days";
+  if (filter === "not-reviewed-7-plus-days") return "Not reviewed 7+ days";
+  return "All cards";
+}
+
+function getSourceGameFilterChipLabel(filter, sourceGameNames) {
+  if (filter === "current") return "Current game";
+  if (filter === "all") return "All games";
+  const sourceGameId = filter.slice("game:".length);
+  return sourceGameNames[sourceGameId] ?? `Game ${sourceGameId.slice(0, 8)}`;
+}
+
 function normalizeDrillQueueDisplayScheduleFilter(filter) {
   return drillQueueDisplayScheduleFilters.includes(filter) ? filter : "all";
 }
@@ -3130,6 +3183,63 @@ assert.equal(getLastReviewedFilterLabel("never-reviewed"), "Never reviewed");
 assert.deepEqual(defaultDrillQueueCardFilter, {
   scheduleFilter: "all",
   sourceGameFilter: "all",
+  lastReviewedFilter: "all",
+});
+assert.deepEqual(getActiveDrillQueueFilterChips(defaultDrillQueueCardFilter), []);
+assert.deepEqual(
+  getActiveDrillQueueFilterChips({
+    ...defaultDrillQueueCardFilter,
+    scheduleFilter: "due-now",
+  }),
+  [{ id: "schedule", label: "Due now" }],
+);
+assert.deepEqual(
+  getActiveDrillQueueFilterChips({
+    ...defaultDrillQueueCardFilter,
+    sourceGameFilter: "current",
+  }),
+  [{ id: "source-game", label: "Current game" }],
+);
+assert.deepEqual(
+  getActiveDrillQueueFilterChips(
+    {
+      ...defaultDrillQueueCardFilter,
+      sourceGameFilter: "game:source-alpha",
+    },
+    { "source-alpha": "Alpha vs Beta" },
+  ),
+  [{ id: "source-game", label: "Alpha vs Beta" }],
+);
+assert.deepEqual(
+  getActiveDrillQueueFilterChips({
+    ...defaultDrillQueueCardFilter,
+    lastReviewedFilter: "reviewed-last-7-days",
+  }),
+  [{ id: "last-reviewed", label: "Reviewed last 7 days" }],
+);
+const multiDrillQueueFilter = {
+  scheduleFilter: "due-soon",
+  sourceGameFilter: "game:source-beta",
+  lastReviewedFilter: "never-reviewed",
+};
+assert.deepEqual(
+  getActiveDrillQueueFilterChips(multiDrillQueueFilter, { "source-beta": "Beta Study" }),
+  [
+    { id: "schedule", label: "Upcoming" },
+    { id: "source-game", label: "Beta Study" },
+    { id: "last-reviewed", label: "Never reviewed" },
+  ],
+);
+assert.deepEqual(clearDrillQueueFilterChip(multiDrillQueueFilter, "schedule"), {
+  ...multiDrillQueueFilter,
+  scheduleFilter: "all",
+});
+assert.deepEqual(clearDrillQueueFilterChip(multiDrillQueueFilter, "source-game"), {
+  ...multiDrillQueueFilter,
+  sourceGameFilter: "all",
+});
+assert.deepEqual(clearDrillQueueFilterChip(multiDrillQueueFilter, "last-reviewed"), {
+  ...multiDrillQueueFilter,
   lastReviewedFilter: "all",
 });
 assert.deepEqual(

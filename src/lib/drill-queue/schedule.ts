@@ -55,6 +55,13 @@ export const DEFAULT_DRILL_QUEUE_CARD_FILTER: DrillQueueCardFilter = {
   lastReviewedFilter: "all",
 };
 
+export type DrillQueueFilterChipId = "schedule" | "source-game" | "last-reviewed";
+
+export type DrillQueueFilterChip = {
+  id: DrillQueueFilterChipId;
+  label: string;
+};
+
 export type ReviewScheduleRule = {
   id:
     | "never-reviewed"
@@ -215,6 +222,51 @@ export function getSourceGameFilterLabel(
   return sourceGameNames[sourceGameId] ?? `Game ${sourceGameId.slice(0, 8)}`;
 }
 
+export function getActiveDrillQueueFilterChips(
+  filter: DrillQueueCardFilter,
+  sourceGameNames: Record<string, string> = {},
+): DrillQueueFilterChip[] {
+  const chips: DrillQueueFilterChip[] = [];
+
+  if (filter.scheduleFilter !== DEFAULT_DRILL_QUEUE_CARD_FILTER.scheduleFilter) {
+    chips.push({
+      id: "schedule",
+      label: getDrillQueueScheduleFilterChipLabel(filter.scheduleFilter),
+    });
+  }
+
+  if (filter.sourceGameFilter !== DEFAULT_DRILL_QUEUE_CARD_FILTER.sourceGameFilter) {
+    chips.push({
+      id: "source-game",
+      label: getSourceGameFilterChipLabel(filter.sourceGameFilter, sourceGameNames),
+    });
+  }
+
+  if (filter.lastReviewedFilter !== DEFAULT_DRILL_QUEUE_CARD_FILTER.lastReviewedFilter) {
+    chips.push({
+      id: "last-reviewed",
+      label: getLastReviewedFilterChipLabel(filter.lastReviewedFilter),
+    });
+  }
+
+  return chips;
+}
+
+export function clearDrillQueueFilterChip(
+  filter: DrillQueueCardFilter,
+  chipId: DrillQueueFilterChipId,
+): DrillQueueCardFilter {
+  if (chipId === "schedule") {
+    return { ...filter, scheduleFilter: DEFAULT_DRILL_QUEUE_CARD_FILTER.scheduleFilter };
+  }
+
+  if (chipId === "source-game") {
+    return { ...filter, sourceGameFilter: DEFAULT_DRILL_QUEUE_CARD_FILTER.sourceGameFilter };
+  }
+
+  return { ...filter, lastReviewedFilter: DEFAULT_DRILL_QUEUE_CARD_FILTER.lastReviewedFilter };
+}
+
 export function normalizeDrillQueueScheduleFilter(
   filter: ReviewScheduleFilter,
 ): DrillQueueScheduleFilter {
@@ -329,6 +381,33 @@ export function getVisibleScheduleSelectedCardId(
 
 function getSourceGameFilterGameId(filter: DrillQueueSourceGameFilter) {
   return filter.startsWith("game:") ? filter.slice("game:".length) : "";
+}
+
+function getDrillQueueScheduleFilterChipLabel(filter: DrillQueueScheduleFilter) {
+  if (filter === "due-now") return "Due now";
+  if (filter === "due-soon") return "Upcoming";
+  if (filter === "stable") return "Later";
+  if (filter === "high-priority") return "Blocked";
+  return "All";
+}
+
+function getLastReviewedFilterChipLabel(filter: DrillQueueLastReviewedFilter) {
+  if (filter === "never-reviewed") return "Never reviewed";
+  if (filter === "reviewed-today") return "Reviewed today";
+  if (filter === "reviewed-last-7-days") return "Reviewed last 7 days";
+  if (filter === "not-reviewed-7-plus-days") return "Not reviewed 7+ days";
+  return "All cards";
+}
+
+function getSourceGameFilterChipLabel(
+  filter: DrillQueueSourceGameFilter,
+  sourceGameNames: Record<string, string>,
+) {
+  if (filter === "current") return "Current game";
+  if (filter === "all") return "All games";
+
+  const sourceGameId = getSourceGameFilterGameId(filter);
+  return sourceGameNames[sourceGameId] ?? `Game ${sourceGameId.slice(0, 8)}`;
 }
 
 function buildReviewScheduleItem(
