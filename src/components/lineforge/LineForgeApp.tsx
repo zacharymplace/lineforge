@@ -572,6 +572,7 @@ export function LineForgeApp() {
           activeGameId={game.id}
           activeGameName={game.name}
           sourceGameNames={sourceGameNames}
+          reviewSchedule={reviewSchedule}
           comparisonLensIds={comparisonLensIds}
           onComparisonLensIdsChange={handleComparisonLensIdsChange}
           selectedCardId={selectedCard?.id ?? null}

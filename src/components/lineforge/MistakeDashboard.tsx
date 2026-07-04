@@ -8,6 +8,7 @@ import {
 import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 import type { OpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
 import type { OpeningWeaknessTrend } from "@/lib/mistake-graph/opening-weakness-trends";
+import { ScheduleBadge } from "./ScheduleBadge";
 
 type MistakeDashboardProps = {
   stats: MistakeStats;
@@ -25,6 +26,9 @@ export function MistakeDashboard({
   reviewSchedule,
 }: MistakeDashboardProps) {
   const sessionStats = getSessionDashboardStats(sessionSummaries);
+  const scheduleItemsByCardId = new Map(
+    reviewSchedule.items.map((item) => [item.cardId, item]),
+  );
 
   return (
     <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
@@ -79,6 +83,9 @@ export function MistakeDashboard({
                     Ply {card.ply}: {card.moveSan}
                   </div>
                   <div className="text-xs text-stone-500">{card.verdict}</div>
+                  <div className="mt-2">
+                    <ScheduleBadge item={scheduleItemsByCardId.get(card.id)} compact />
+                  </div>
                 </div>
               ))
             )}

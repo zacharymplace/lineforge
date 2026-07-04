@@ -28,9 +28,12 @@ import {
   createTransientMessageState,
   type TransientMessageState,
 } from "@/lib/ui/transient-message";
+import { ScheduleBadge } from "./ScheduleBadge";
+import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 
 type OpeningWeaknessMapPanelProps = {
   openingMap: OpeningWeaknessMap;
+  reviewSchedule?: ReviewScheduleSummary;
   activeGameId?: string | null;
   onStartBucketReview: (bucket: OpeningWeaknessBucket) => void;
   onStartCardIdsReview: (cardIds: string[]) => void;
@@ -38,6 +41,7 @@ type OpeningWeaknessMapPanelProps = {
 
 export function OpeningWeaknessMapPanel({
   openingMap,
+  reviewSchedule,
   activeGameId,
   onStartBucketReview,
   onStartCardIdsReview,
@@ -50,6 +54,9 @@ export function OpeningWeaknessMapPanel({
     message: null,
     token: 0,
   });
+  const scheduleItemsByCardId = new Map(
+    reviewSchedule?.items.map((item) => [item.cardId, item]) ?? [],
+  );
   const savedMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filter: OpeningWeaknessFilter = useMemo(
     () => ({
@@ -291,14 +298,17 @@ export function OpeningWeaknessMapPanel({
                 {selectedBucket.signals.slice(0, 6).map((signal) => (
                   <div
                     key={signal.cardId}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-stone-950 px-3 py-2"
+                    className="grid gap-2 rounded-md bg-stone-950 px-3 py-2"
                   >
-                    <span className="text-stone-200">
-                      Ply {signal.ply}: {signal.moveSan}
-                    </span>
-                    <span className="text-xs text-stone-500">
-                      {signal.verdict} · {signal.tags.join(", ") || "no tags"}
-                    </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-stone-200">
+                        Ply {signal.ply}: {signal.moveSan}
+                      </span>
+                      <span className="text-xs text-stone-500">
+                        {signal.verdict} · {signal.tags.join(", ") || "no tags"}
+                      </span>
+                    </div>
+                    <ScheduleBadge item={scheduleItemsByCardId.get(signal.cardId)} compact />
                   </div>
                 ))}
               </div>

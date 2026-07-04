@@ -103,6 +103,35 @@ export function getReviewScheduleStatusLabel(status: ReviewScheduleStatus) {
   return "Stable";
 }
 
+export function getReviewScheduleBadgeText(item: ReviewScheduleItem) {
+  return getReviewScheduleStatusLabel(item.status);
+}
+
+export function getReviewSchedulePriorityLabel(item: Pick<ReviewScheduleItem, "priorityScore">) {
+  if (item.priorityScore >= 80) return "High priority";
+  if (item.priorityScore >= 45) return "Medium priority";
+  if (item.priorityScore > 0) return "Low priority";
+  return "Low priority";
+}
+
+export function getReviewScheduleCardAction(item: ReviewScheduleItem) {
+  if (item.lastAttemptResult === "missed") return "Review after missed attempt";
+  if (item.skippedRecently) return "Review after skipped session";
+  if (item.attempts === 0) return "Start first review";
+  if (item.status === "due-soon") return "Review soon";
+  if (item.status === "due-now") return "Review now";
+  return "Keep in rotation";
+}
+
+export function formatReviewScheduleLastReviewed(item: Pick<ReviewScheduleItem, "lastReviewedAt">) {
+  if (!item.lastReviewedAt) {
+    return "Never reviewed";
+  }
+
+  const date = new Date(item.lastReviewedAt);
+  return Number.isNaN(date.getTime()) ? "Last reviewed unknown" : `Last ${date.toLocaleDateString()}`;
+}
+
 function buildReviewScheduleItem(
   card: MistakeCard,
   skippedRecently: boolean,

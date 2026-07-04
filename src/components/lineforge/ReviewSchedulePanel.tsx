@@ -2,9 +2,9 @@
 
 import {
   buildDueReviewCardIds,
-  getReviewScheduleStatusLabel,
   type ReviewScheduleSummary,
 } from "@/lib/drill-queue/schedule";
+import { ScheduleBadge } from "./ScheduleBadge";
 
 type ReviewSchedulePanelProps = {
   schedule: ReviewScheduleSummary;
@@ -70,9 +70,7 @@ export function ReviewSchedulePanel({
                 </div>
               </div>
               <div className="flex flex-wrap items-start gap-2 sm:justify-end">
-                <span className="rounded-md border border-stone-700 px-2 py-1 text-xs text-stone-300">
-                  {getReviewScheduleStatusLabel(item.status)}
-                </span>
+                <ScheduleBadge item={item} compact />
                 <span className="rounded-md bg-stone-950 px-2 py-1 font-mono text-xs text-amber-100">
                   {item.priorityScore}
                 </span>

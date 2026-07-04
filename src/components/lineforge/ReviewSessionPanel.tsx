@@ -7,6 +7,7 @@ import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
 import { OpeningWeaknessTrendPanel } from "./OpeningWeaknessTrendPanel";
 import { ReviewSchedulePanel } from "./ReviewSchedulePanel";
 import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
+import { ScheduleBadge } from "./ScheduleBadge";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
 import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
@@ -91,6 +92,10 @@ export function ReviewSessionPanel({
   const currentCard = currentCardId
     ? cards.find((card) => card.id === currentCardId) ?? null
     : null;
+  const currentScheduleItem =
+    currentCardId && reviewSchedule
+      ? reviewSchedule.items.find((item) => item.cardId === currentCardId)
+      : undefined;
 
   function startSession() {
     const nextSession = buildReviewSession(cards, filter, sessionSize);
@@ -300,6 +305,9 @@ export function ReviewSessionPanel({
               <div className="text-xs text-stone-500">
                 {currentCard.verdict} · {currentCard.tags.join(", ") || "no tags"}
               </div>
+              <div className="mt-2">
+                <ScheduleBadge item={currentScheduleItem} />
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -352,6 +360,7 @@ export function ReviewSessionPanel({
       {openingMap ? (
         <OpeningWeaknessMapPanel
           openingMap={openingMap}
+          reviewSchedule={reviewSchedule}
           activeGameId={activeGameId}
           onStartBucketReview={startOpeningWeaknessBucketSession}
           onStartCardIdsReview={(cardIds) => startOpeningWeaknessCardIdsSession(cardIds)}

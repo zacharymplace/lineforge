@@ -22,12 +22,15 @@ import { CoachLensComparison } from "./CoachLensComparison";
 import { CoachLensPanel } from "./CoachLensPanel";
 import { ReviewPacketPreviewModal } from "./ReviewPacketPreviewModal";
 import { ReviewSummary } from "./ReviewSummary";
+import { ScheduleBadge } from "./ScheduleBadge";
+import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 
 type DrillQueuePanelProps = {
   cards: MistakeCard[];
   activeGameId?: string;
   activeGameName?: string;
   sourceGameNames?: Record<string, string>;
+  reviewSchedule?: ReviewScheduleSummary;
   comparisonLensIds: CoachLensId[];
   onComparisonLensIdsChange: (lensIds: CoachLensId[]) => void;
   selectedCardId: string | null;
@@ -48,6 +51,7 @@ export function DrillQueuePanel({
   activeGameId,
   activeGameName,
   sourceGameNames,
+  reviewSchedule,
   comparisonLensIds,
   onComparisonLensIdsChange,
   selectedCardId,
@@ -59,6 +63,10 @@ export function DrillQueuePanel({
   attemptResult,
 }: DrillQueuePanelProps) {
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
+  const scheduleItemsByCardId = new Map(
+    reviewSchedule?.items.map((item) => [item.cardId, item]) ?? [],
+  );
+  const selectedScheduleItem = selectedCard ? scheduleItemsByCardId.get(selectedCard.id) : undefined;
   const selectedAttempts = selectedCard?.attemptHistory ?? [];
   const lastAttempt = selectedAttempts.at(-1);
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
@@ -135,6 +143,7 @@ export function DrillQueuePanel({
                 <span className="text-xs text-stone-500">
                   {card.correct}/{card.attempts} remembered
                 </span>
+                <ScheduleBadge item={scheduleItemsByCardId.get(card.id)} compact />
               </button>
             ))
           )}
@@ -162,6 +171,7 @@ export function DrillQueuePanel({
                 <div className="text-stone-200">{lastAttempt?.result ?? "None"}</div>
               </div>
             </div>
+            <ScheduleBadge item={selectedScheduleItem} />
             <div className="flex flex-wrap gap-2">
               <button className="lf-button" onClick={handlePreviewPacket}>
                 Export card packet

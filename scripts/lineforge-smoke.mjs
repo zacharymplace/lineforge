@@ -1244,6 +1244,39 @@ function getScheduleRecommendation(dueNowItems, dueSoonItems, newItems, allItems
   return "Your current review queue is stable.";
 }
 
+function getReviewScheduleStatusLabel(status) {
+  if (status === "due-now") return "Due now";
+  if (status === "due-soon") return "Due soon";
+  if (status === "new") return "New";
+  return "Stable";
+}
+
+function getReviewScheduleBadgeText(item) {
+  return getReviewScheduleStatusLabel(item.status);
+}
+
+function getReviewSchedulePriorityLabel(item) {
+  if (item.priorityScore >= 80) return "High priority";
+  if (item.priorityScore >= 45) return "Medium priority";
+  if (item.priorityScore > 0) return "Low priority";
+  return "Low priority";
+}
+
+function getReviewScheduleCardAction(item) {
+  if (item.lastAttemptResult === "missed") return "Review after missed attempt";
+  if (item.skippedRecently) return "Review after skipped session";
+  if (item.attempts === 0) return "Start first review";
+  if (item.status === "due-soon") return "Review soon";
+  if (item.status === "due-now") return "Review now";
+  return "Keep in rotation";
+}
+
+function formatReviewScheduleLastReviewed(item) {
+  if (!item.lastReviewedAt) return "Never reviewed";
+  const date = new Date(item.lastReviewedAt);
+  return Number.isNaN(date.getTime()) ? "Last reviewed unknown" : `Last ${date.toLocaleDateString()}`;
+}
+
 function buildDueReviewSession(cards, schedule) {
   return buildReviewSession(
     [...new Set(schedule.dueReviewCardIds)]
@@ -2887,6 +2920,17 @@ assert.equal(scheduleStatusById["schedule-skipped-card"], "due-soon");
 assert.equal(reviewSchedule.topPriorityItems[0].cardId, "schedule-missed-card");
 assert.deepEqual(reviewSchedule.dueReviewCardIds, ["schedule-missed-card"]);
 assert.deepEqual(buildDueReviewSession(scheduleCards, reviewSchedule).selectedCardIds, ["schedule-missed-card"]);
+const scheduleItemById = Object.fromEntries(reviewSchedule.items.map((item) => [item.cardId, item]));
+assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-missed-card"]), "Due now");
+assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-low-rate-card"]), "Due soon");
+assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-new-card"]), "New");
+assert.equal(getReviewScheduleBadgeText(scheduleItemById["schedule-stable-card"]), "Stable");
+assert.equal(getReviewSchedulePriorityLabel(scheduleItemById["schedule-missed-card"]), "High priority");
+assert.equal(getReviewSchedulePriorityLabel(scheduleItemById["schedule-new-card"]), "Medium priority");
+assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-missed-card"]), "Review after missed attempt");
+assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-skipped-card"]), "Review after skipped session");
+assert.equal(getReviewScheduleCardAction(scheduleItemById["schedule-new-card"]), "Start first review");
+assert.equal(formatReviewScheduleLastReviewed(scheduleItemById["schedule-new-card"]), "Never reviewed");
 const newOnlySchedule = buildReviewSchedule([scheduleCards[0]], [], undefined, scheduleNow);
 assert.deepEqual(newOnlySchedule.dueReviewCardIds, ["schedule-new-card"]);
 const emptySchedule = buildReviewSchedule([], [], undefined, scheduleNow);
