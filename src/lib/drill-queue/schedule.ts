@@ -30,6 +30,31 @@ export const DRILL_QUEUE_SCHEDULE_FILTERS = [
 
 export type DrillQueueScheduleFilter = (typeof DRILL_QUEUE_SCHEDULE_FILTERS)[number];
 
+export const DRILL_QUEUE_LAST_REVIEWED_FILTERS = [
+  "all",
+  "never-reviewed",
+  "reviewed-today",
+  "reviewed-last-7-days",
+  "not-reviewed-7-plus-days",
+] as const;
+
+export type DrillQueueLastReviewedFilter = (typeof DRILL_QUEUE_LAST_REVIEWED_FILTERS)[number];
+
+export type DrillQueueSourceGameFilter = "all" | "current" | `game:${string}`;
+
+export type DrillQueueCardFilter = {
+  scheduleFilter: DrillQueueScheduleFilter;
+  sourceGameFilter: DrillQueueSourceGameFilter;
+  lastReviewedFilter: DrillQueueLastReviewedFilter;
+  activeGameId?: string | null;
+};
+
+export const DEFAULT_DRILL_QUEUE_CARD_FILTER: DrillQueueCardFilter = {
+  scheduleFilter: "all",
+  sourceGameFilter: "all",
+  lastReviewedFilter: "all",
+};
+
 export type ReviewScheduleRule = {
   id:
     | "never-reviewed"
@@ -170,6 +195,26 @@ export function getDrillQueueScheduleFilterLabel(filter: DrillQueueScheduleFilte
   return "Blocked";
 }
 
+export function getLastReviewedFilterLabel(filter: DrillQueueLastReviewedFilter) {
+  if (filter === "all") return "All cards";
+  if (filter === "never-reviewed") return "Never reviewed";
+  if (filter === "reviewed-today") return "Reviewed today";
+  if (filter === "reviewed-last-7-days") return "Reviewed in last 7 days";
+  return "Not reviewed in 7+ days";
+}
+
+export function getSourceGameFilterLabel(
+  filter: DrillQueueSourceGameFilter,
+  sourceGameNames: Record<string, string> = {},
+  activeGameName?: string,
+) {
+  if (filter === "all") return "All games";
+  if (filter === "current") return activeGameName ? `Current game: ${activeGameName}` : "Current active game";
+
+  const sourceGameId = getSourceGameFilterGameId(filter);
+  return sourceGameNames[sourceGameId] ?? `Game ${sourceGameId.slice(0, 8)}`;
+}
+
 export function normalizeDrillQueueScheduleFilter(
   filter: ReviewScheduleFilter,
 ): DrillQueueScheduleFilter {
@@ -197,6 +242,56 @@ export function matchesScheduleFilter(
   return item.status === filter;
 }
 
+export function matchesSourceGameFilter(
+  card: Pick<MistakeCard, "sourceGameId">,
+  filter: DrillQueueSourceGameFilter,
+  activeGameId?: string | null,
+) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (!card.sourceGameId) {
+    return false;
+  }
+
+  if (filter === "current") {
+    return Boolean(activeGameId && card.sourceGameId === activeGameId);
+  }
+
+  return card.sourceGameId === getSourceGameFilterGameId(filter);
+}
+
+export function matchesLastReviewedFilter(
+  card: Pick<MistakeCard, "lastReviewedAt">,
+  filter: DrillQueueLastReviewedFilter,
+  now = new Date(),
+) {
+  if (filter === "all") {
+    return true;
+  }
+
+  const reviewedDayAge = getLocalDayAge(card.lastReviewedAt, now);
+
+  if (filter === "never-reviewed") {
+    return reviewedDayAge === null;
+  }
+
+  if (reviewedDayAge === null) {
+    return false;
+  }
+
+  if (filter === "reviewed-today") {
+    return reviewedDayAge === 0;
+  }
+
+  if (filter === "reviewed-last-7-days") {
+    return reviewedDayAge >= 0 && reviewedDayAge <= 6;
+  }
+
+  return reviewedDayAge >= 7;
+}
+
 export function filterCardsByScheduleStatus(
   cards: MistakeCard[],
   schedule: ReviewScheduleSummary | undefined,
@@ -204,6 +299,21 @@ export function filterCardsByScheduleStatus(
 ) {
   const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
   return cards.filter((card) => matchesScheduleFilter(scheduleItemsByCardId.get(card.id), filter));
+}
+
+export function filterDrillQueueCards(
+  cards: MistakeCard[],
+  schedule: ReviewScheduleSummary | undefined,
+  filter: DrillQueueCardFilter,
+  now = new Date(),
+) {
+  const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
+  return cards.filter(
+    (card) =>
+      matchesScheduleFilter(scheduleItemsByCardId.get(card.id), filter.scheduleFilter) &&
+      matchesSourceGameFilter(card, filter.sourceGameFilter, filter.activeGameId) &&
+      matchesLastReviewedFilter(card, filter.lastReviewedFilter, now),
+  );
 }
 
 export function getVisibleScheduleSelectedCardId(
@@ -215,6 +325,10 @@ export function getVisibleScheduleSelectedCardId(
   }
 
   return visibleCards[0]?.id ?? null;
+}
+
+function getSourceGameFilterGameId(filter: DrillQueueSourceGameFilter) {
+  return filter.startsWith("game:") ? filter.slice("game:".length) : "";
 }
 
 function buildReviewScheduleItem(
@@ -365,6 +479,21 @@ function daysBetween(value: string | undefined, now: Date) {
   }
 
   return Math.max(0, (now.getTime() - date.getTime()) / 86_400_000);
+}
+
+function getLocalDayAge(value: string | undefined, now: Date) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return Math.floor((nowStart - dateStart) / 86_400_000);
 }
 
 function getOpeningBucketIdsByCard(openingMap?: OpeningWeaknessMap) {

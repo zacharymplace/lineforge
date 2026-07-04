@@ -1287,6 +1287,11 @@ function getScheduleFilterLabel(filter) {
 }
 
 const drillQueueDisplayScheduleFilters = ["all", "due-now", "due-soon", "stable", "high-priority"];
+const defaultDrillQueueCardFilter = {
+  scheduleFilter: "all",
+  sourceGameFilter: "all",
+  lastReviewedFilter: "all",
+};
 
 function getDrillQueueScheduleFilterLabel(filter) {
   if (filter === "all") return "All";
@@ -1294,6 +1299,14 @@ function getDrillQueueScheduleFilterLabel(filter) {
   if (filter === "due-soon") return "Upcoming";
   if (filter === "stable") return "Later";
   return "Blocked";
+}
+
+function getLastReviewedFilterLabel(filter) {
+  if (filter === "all") return "All cards";
+  if (filter === "never-reviewed") return "Never reviewed";
+  if (filter === "reviewed-today") return "Reviewed today";
+  if (filter === "reviewed-last-7-days") return "Reviewed in last 7 days";
+  return "Not reviewed in 7+ days";
 }
 
 function normalizeDrillQueueDisplayScheduleFilter(filter) {
@@ -1307,10 +1320,38 @@ function matchesScheduleFilter(item, filter) {
   return item.status === filter;
 }
 
+function matchesSourceGameFilter(currentCard, filter, activeGameId) {
+  if (filter === "all") return true;
+  if (!currentCard.sourceGameId) return false;
+  if (filter === "current") return Boolean(activeGameId && currentCard.sourceGameId === activeGameId);
+  return currentCard.sourceGameId === filter.slice("game:".length);
+}
+
+function matchesLastReviewedFilter(currentCard, filter, now = new Date()) {
+  if (filter === "all") return true;
+  const reviewedDayAge = getLocalDayAge(currentCard.lastReviewedAt, now);
+
+  if (filter === "never-reviewed") return reviewedDayAge === null;
+  if (reviewedDayAge === null) return false;
+  if (filter === "reviewed-today") return reviewedDayAge === 0;
+  if (filter === "reviewed-last-7-days") return reviewedDayAge >= 0 && reviewedDayAge <= 6;
+  return reviewedDayAge >= 7;
+}
+
 function filterCardsByScheduleStatus(cards, schedule, filter) {
   const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
   return cards.filter((currentCard) =>
     matchesScheduleFilter(scheduleItemsByCardId.get(currentCard.id), filter),
+  );
+}
+
+function filterDrillQueueCards(cards, schedule, filter, now = new Date()) {
+  const scheduleItemsByCardId = new Map(schedule?.items.map((item) => [item.cardId, item]) ?? []);
+  return cards.filter(
+    (currentCard) =>
+      matchesScheduleFilter(scheduleItemsByCardId.get(currentCard.id), filter.scheduleFilter) &&
+      matchesSourceGameFilter(currentCard, filter.sourceGameFilter, filter.activeGameId) &&
+      matchesLastReviewedFilter(currentCard, filter.lastReviewedFilter, now),
   );
 }
 
@@ -1320,6 +1361,15 @@ function getVisibleScheduleSelectedCardId(visibleCards, selectedCardId) {
   }
 
   return visibleCards[0]?.id ?? null;
+}
+
+function getLocalDayAge(value, now) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return Math.floor((nowStart - dateStart) / 86_400_000);
 }
 
 const drillQueueScheduleFilters = ["all", "due-now", "due-soon", "new", "stable", "high-priority"];
@@ -2887,6 +2937,7 @@ const scheduleCards = [
     tags: ["missed tactic"],
     attempts: 0,
     correct: 0,
+    sourceGameId: "source-alpha",
     lastReviewedAt: undefined,
     attemptHistory: [],
   },
@@ -2898,6 +2949,7 @@ const scheduleCards = [
     tags: ["missed tactic"],
     attempts: 1,
     correct: 0,
+    sourceGameId: "source-alpha",
     lastReviewedAt: "2026-07-03T10:00:00.000Z",
     attemptHistory: [
       {
@@ -2917,6 +2969,7 @@ const scheduleCards = [
     tags: [],
     attempts: 1,
     correct: 1,
+    sourceGameId: "source-beta",
     lastReviewedAt: "2026-07-02T10:00:00.000Z",
     attemptHistory: [
       {
@@ -2936,6 +2989,7 @@ const scheduleCards = [
     tags: ["bad trade"],
     attempts: 4,
     correct: 1,
+    sourceGameId: "source-beta",
     lastReviewedAt: "2026-06-30T10:00:00.000Z",
     attemptHistory: [
       {
@@ -2955,12 +3009,33 @@ const scheduleCards = [
     tags: ["king safety"],
     attempts: 1,
     correct: 1,
+    sourceGameId: "source-gamma",
     lastReviewedAt: "2026-07-01T10:00:00.000Z",
     attemptHistory: [
       {
         id: "schedule-skipped-attempt",
         attemptedAt: "2026-07-01T10:00:00.000Z",
         expectedMoveSan: "Kh1",
+        result: "remembered",
+        method: "manual-reveal",
+      },
+    ],
+  },
+  {
+    ...manualReviewed,
+    id: "schedule-old-card",
+    moveSan: "d4",
+    verdict: "good",
+    tags: [],
+    attempts: 1,
+    correct: 1,
+    sourceGameId: "source-old",
+    lastReviewedAt: "2026-06-20T10:00:00.000Z",
+    attemptHistory: [
+      {
+        id: "schedule-old-attempt",
+        attemptedAt: "2026-06-20T10:00:00.000Z",
+        expectedMoveSan: "d4",
         result: "remembered",
         method: "manual-reveal",
       },
@@ -3043,7 +3118,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "stable").map((currentCard) => currentCard.id),
-  ["schedule-stable-card"],
+  ["schedule-stable-card", "schedule-old-card"],
 );
 assert.deepEqual(
   filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "high-priority").map((currentCard) => currentCard.id),
@@ -3051,6 +3126,122 @@ assert.deepEqual(
 );
 assert.equal(filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "all").length, scheduleCards.length);
 assert.deepEqual(filterCardsByScheduleStatus([scheduleCards[2]], reviewSchedule, "due-now"), []);
+assert.equal(getLastReviewedFilterLabel("never-reviewed"), "Never reviewed");
+assert.deepEqual(defaultDrillQueueCardFilter, {
+  scheduleFilter: "all",
+  sourceGameFilter: "all",
+  lastReviewedFilter: "all",
+});
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "game:source-alpha",
+      lastReviewedFilter: "all",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-new-card", "schedule-missed-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "current",
+      lastReviewedFilter: "all",
+      activeGameId: "source-beta",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-stable-card", "schedule-low-rate-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "all",
+      lastReviewedFilter: "never-reviewed",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-new-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "all",
+      lastReviewedFilter: "reviewed-today",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-missed-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "all",
+      lastReviewedFilter: "reviewed-last-7-days",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  [
+    "schedule-missed-card",
+    "schedule-stable-card",
+    "schedule-low-rate-card",
+    "schedule-skipped-card",
+  ],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "all",
+      sourceGameFilter: "all",
+      lastReviewedFilter: "not-reviewed-7-plus-days",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-old-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "due-soon",
+      sourceGameFilter: "game:source-beta",
+      lastReviewedFilter: "reviewed-last-7-days",
+    },
+    scheduleNow,
+  ).map((currentCard) => currentCard.id),
+  ["schedule-low-rate-card"],
+);
+assert.deepEqual(
+  filterDrillQueueCards(
+    scheduleCards,
+    reviewSchedule,
+    {
+      scheduleFilter: "stable",
+      sourceGameFilter: "game:source-alpha",
+      lastReviewedFilter: "all",
+    },
+    scheduleNow,
+  ),
+  [],
+);
 assert.equal(
   getVisibleScheduleSelectedCardId(
     filterCardsByScheduleStatus(scheduleCards, reviewSchedule, "due-now"),

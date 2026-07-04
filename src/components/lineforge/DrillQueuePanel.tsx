@@ -34,12 +34,18 @@ import { ReviewSummary } from "./ReviewSummary";
 import { ScheduleBadge } from "./ScheduleBadge";
 import { StatusHint } from "./StatusHint";
 import {
+  DEFAULT_DRILL_QUEUE_CARD_FILTER,
+  DRILL_QUEUE_LAST_REVIEWED_FILTERS,
   DRILL_QUEUE_SCHEDULE_FILTERS,
-  filterCardsByScheduleStatus,
+  filterDrillQueueCards,
   getDrillQueueScheduleFilterLabel,
+  getLastReviewedFilterLabel,
+  getSourceGameFilterLabel,
   getVisibleScheduleSelectedCardId,
   normalizeDrillQueueScheduleFilter,
+  type DrillQueueLastReviewedFilter,
   type DrillQueueScheduleFilter,
+  type DrillQueueSourceGameFilter,
   type ReviewScheduleSummary,
 } from "@/lib/drill-queue/schedule";
 
@@ -83,9 +89,32 @@ export function DrillQueuePanel({
   const [scheduleFilter, setScheduleFilter] = useState<DrillQueueScheduleFilter>(() =>
     normalizeDrillQueueScheduleFilter(loadDrillQueueScheduleFilterPreference()),
   );
+  const [sourceGameFilter, setSourceGameFilter] = useState<DrillQueueSourceGameFilter>(
+    DEFAULT_DRILL_QUEUE_CARD_FILTER.sourceGameFilter,
+  );
+  const [lastReviewedFilter, setLastReviewedFilter] = useState<DrillQueueLastReviewedFilter>(
+    DEFAULT_DRILL_QUEUE_CARD_FILTER.lastReviewedFilter,
+  );
+  const sourceGameOptions = useMemo(() => {
+    const cardSourceGameIds = new Set(
+      cards.map((card) => card.sourceGameId).filter((sourceGameId): sourceGameId is string => Boolean(sourceGameId)),
+    );
+
+    return [...cardSourceGameIds]
+      .filter((sourceGameId) => Boolean(sourceGameNames?.[sourceGameId]))
+      .sort((firstId, secondId) =>
+        (sourceGameNames?.[firstId] ?? firstId).localeCompare(sourceGameNames?.[secondId] ?? secondId),
+      );
+  }, [cards, sourceGameNames]);
   const visibleCards = useMemo(
-    () => filterCardsByScheduleStatus(cards, reviewSchedule, scheduleFilter),
-    [cards, reviewSchedule, scheduleFilter],
+    () =>
+      filterDrillQueueCards(cards, reviewSchedule, {
+        scheduleFilter,
+        sourceGameFilter,
+        lastReviewedFilter,
+        activeGameId,
+      }),
+    [activeGameId, cards, lastReviewedFilter, reviewSchedule, scheduleFilter, sourceGameFilter],
   );
   const visibleSelectedCardId = getVisibleScheduleSelectedCardId(visibleCards, selectedCardId);
   const selectedCard = visibleSelectedCardId
@@ -109,6 +138,11 @@ export function DrillQueuePanel({
   const selectedCardGameName =
     (selectedCard ? sourceGameNames?.[selectedCard.sourceGameId] : undefined) ??
     (selectedCard?.sourceGameId === activeGameId ? activeGameName : undefined);
+  const activeFilterLabels = [
+    getDrillQueueScheduleFilterLabel(scheduleFilter),
+    getSourceGameFilterLabel(sourceGameFilter, sourceGameNames, activeGameName),
+    getLastReviewedFilterLabel(lastReviewedFilter),
+  ];
   const coachLensInput: CoachLensInput = selectedCard
     ? {
         moveSan: selectedCard.moveSan,
@@ -164,6 +198,15 @@ export function DrillQueuePanel({
     showSavedMessage();
   }
 
+  function handleResetFilters() {
+    setScheduleFilter(
+      normalizeDrillQueueScheduleFilter(saveDrillQueueScheduleFilterPreference("all")),
+    );
+    setSourceGameFilter(DEFAULT_DRILL_QUEUE_CARD_FILTER.sourceGameFilter);
+    setLastReviewedFilter(DEFAULT_DRILL_QUEUE_CARD_FILTER.lastReviewedFilter);
+    showSavedMessage();
+  }
+
   function showSavedMessage() {
     setSavedMessage((currentMessage) => {
       const nextMessage = createTransientMessageState("Filter saved locally", currentMessage);
@@ -191,22 +234,63 @@ export function DrillQueuePanel({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(180px,240px)_1fr]">
         <div className="grid content-start gap-2">
-          <label className="grid gap-1 text-sm">
-            <span className="text-stone-500">Schedule filter</span>
-            <select
-              className="lf-field"
-              value={scheduleFilter}
-              onChange={(event) => handleScheduleFilterChange(event.target.value)}
-            >
-              {DRILL_QUEUE_SCHEDULE_FILTERS.map((filter) => (
-                <option key={filter} value={filter}>
-                  {getDrillQueueScheduleFilterLabel(filter)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="text-xs text-stone-500">
-            {getDrillQueueScheduleFilterLabel(scheduleFilter)} · {visibleCards.length} of {cards.length} cards
+          <div className="grid gap-2">
+            <label className="grid gap-1 text-sm">
+              <span className="text-stone-500">Schedule filter</span>
+              <select
+                className="lf-field"
+                value={scheduleFilter}
+                onChange={(event) => handleScheduleFilterChange(event.target.value)}
+              >
+                {DRILL_QUEUE_SCHEDULE_FILTERS.map((filter) => (
+                  <option key={filter} value={filter}>
+                    {getDrillQueueScheduleFilterLabel(filter)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-stone-500">Source game</span>
+              <select
+                className="lf-field"
+                value={sourceGameFilter}
+                onChange={(event) =>
+                  setSourceGameFilter(event.target.value as DrillQueueSourceGameFilter)
+                }
+              >
+                <option value="all">All games</option>
+                {activeGameId ? <option value="current">Current active saved game</option> : null}
+                {sourceGameOptions.map((sourceGameId) => (
+                  <option key={sourceGameId} value={`game:${sourceGameId}`}>
+                    {sourceGameNames?.[sourceGameId] ?? sourceGameId}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-stone-500">Last reviewed</span>
+              <select
+                className="lf-field"
+                value={lastReviewedFilter}
+                onChange={(event) =>
+                  setLastReviewedFilter(event.target.value as DrillQueueLastReviewedFilter)
+                }
+              >
+                {DRILL_QUEUE_LAST_REVIEWED_FILTERS.map((filter) => (
+                  <option key={filter} value={filter}>
+                    {getLastReviewedFilterLabel(filter)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-2 text-xs text-stone-500">
+            <div>
+              Filters: {activeFilterLabels.join(" · ")} · {visibleCards.length} of {cards.length} cards
+            </div>
+            <button className="lf-button w-fit text-xs" onClick={handleResetFilters}>
+              Reset filters
+            </button>
           </div>
           <StatusHint message={savedMessage.message} />
           <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
@@ -214,7 +298,7 @@ export function DrillQueuePanel({
             <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
           ) : visibleCards.length === 0 ? (
             <div className="p-3 text-sm text-stone-500">
-              No cards match the {getDrillQueueScheduleFilterLabel(scheduleFilter).toLowerCase()} filter.
+              No cards match these filters: {activeFilterLabels.join(", ")}.
             </div>
           ) : (
             visibleCards.map((card) => (
