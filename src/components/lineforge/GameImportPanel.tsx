@@ -6,6 +6,7 @@ import {
   clampPreviewPly,
   getPreviewMoveLabel,
   getPreviewPosition,
+  LINEFORGE_DEMO_PGN,
 } from "@/lib/move-ledger/import-preview";
 import type { LineForgeGame, PgnImportPreview } from "@/lib/move-ledger/types";
 import { StatusHint } from "./StatusHint";
@@ -38,8 +39,8 @@ export function GameImportPanel({
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
-  function handlePreview() {
-    const result = onPreviewPgn(draftPgn);
+  function previewPgn(nextPgn: string, successMessage = "PGN preview ready.") {
+    const result = onPreviewPgn(nextPgn);
 
     if (result.error || !result.preview) {
       setPreview(null);
@@ -51,8 +52,17 @@ export function GameImportPanel({
     setPreview(result.preview);
     setPreviewPly(0);
     setDraftName(result.preview.suggestedName);
-    setMessage("PGN preview ready.");
+    setMessage(successMessage);
     setIsError(false);
+  }
+
+  function handlePreview() {
+    previewPgn(draftPgn);
+  }
+
+  function handleDemoPreview() {
+    setDraftPgn(LINEFORGE_DEMO_PGN);
+    previewPgn(LINEFORGE_DEMO_PGN, "Demo PGN preview ready.");
   }
 
   function handleConfirm() {
@@ -84,6 +94,9 @@ export function GameImportPanel({
           Preview and inspect a game record before replacing the active board.
         </p>
       </div>
+      <p className="text-sm text-stone-500">
+        Paste a PGN or try the demo game to start building mistake cards.
+      </p>
       {hasUnsavedChanges ? (
         <div className="rounded-md border border-amber-900/70 bg-amber-950/30 p-3 text-sm text-amber-100">
           Current game has unsaved changes. Previewing is safe; confirming an import will replace
@@ -100,6 +113,9 @@ export function GameImportPanel({
       <div className="flex flex-wrap items-center gap-2">
         <button className="lf-button-primary" onClick={handlePreview}>
           Preview PGN
+        </button>
+        <button className="lf-button" onClick={handleDemoPreview}>
+          Try demo game
         </button>
         {isError && message ? (
           <span className="text-sm text-red-200" role="alert">

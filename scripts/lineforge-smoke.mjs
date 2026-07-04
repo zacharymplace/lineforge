@@ -5,6 +5,14 @@ const verdicts = ["good", "mistake", "blunder", "unclear"];
 const tags = ["missed tactic", "hung piece", "time pressure"];
 const defaultGameName = "Untitled game";
 const legacyDefaultGameName = "Analysis board";
+const lineforgeDemoPgn = `[Event "LineForge Demo"]
+[Site "Local"]
+[Date "2026.07.03"]
+[White "Demo White"]
+[Black "Demo Black"]
+[Result "1-0"]
+
+1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0`;
 
 function normalizeDefaultGameName(name) {
   const trimmedName = name?.trim();
@@ -20,6 +28,19 @@ function getDisplayGameName(gameOrName) {
   return normalizeDefaultGameName(
     typeof gameOrName === "string" ? gameOrName : gameOrName?.name,
   );
+}
+
+function hasMeaningfulGameContent(gameToCheck) {
+  return (
+    gameToCheck.moves.length > 0 ||
+    Boolean(gameToCheck.pgn.trim()) ||
+    Object.keys(gameToCheck.annotations).length > 0 ||
+    normalizeDefaultGameName(gameToCheck.name) !== defaultGameName
+  );
+}
+
+function shouldWarnBeforeReplacingGame({ game: gameToCheck, isDraftGame, hasUnsavedChanges }) {
+  return isDraftGame ? hasMeaningfulGameContent(gameToCheck) : hasUnsavedChanges;
 }
 
 function calculateMistakeStats(cards) {
@@ -2473,11 +2494,23 @@ assert.equal(canceledActiveGame.id, game.id);
 const scrubbedPreviewPosition = getPreviewPosition(previewResult.preview.boardPreview, 3);
 assert.equal(scrubbedPreviewPosition.moveSan, "Nf3");
 assert.equal(activeGame.id, game.id);
+const demoActiveGameBeforePreview = activeGame;
+const demoPreview = parsePgnImportPreview(lineforgeDemoPgn, false);
+assert.equal(demoPreview.ok, true);
+assert.equal(demoPreview.preview.metadata.event, "LineForge Demo");
+assert.equal(demoPreview.preview.previewTitle, "Demo White vs Demo Black");
+assert.equal(demoPreview.preview.moveCount, 7);
+assert.equal(demoPreview.preview.hasUnsavedWarning, false);
+assert.equal(demoPreview.preview.warning, undefined);
+assert.equal(activeGame.id, demoActiveGameBeforePreview.id);
 activeGame = createGameFromImportPreview(previewResult.preview, "Ada prep game");
 assert.notEqual(activeGame.id, game.id);
 assert.equal(activeGame.name, "Ada prep game");
 assert.equal(activeGame.moves.length, 6);
 assert.equal(hasUnsavedChanges(createEmptyLibrary(), activeGame), true);
+const demoImportedGame = createGameFromImportPreview(demoPreview.preview, "Demo review draft");
+assert.equal(demoImportedGame.name, "Demo review draft");
+assert.equal(demoImportedGame.moves.length, 7);
 
 const missingMetadataPreview = parsePgnImportPreview("1. d4 d5 2. c4 e6", false);
 assert.equal(missingMetadataPreview.ok, true);
@@ -2520,6 +2553,43 @@ const invalidPreview = parsePgnImportPreview("this is not pgn", true);
 assert.equal(invalidPreview.ok, false);
 assert.equal(activeGame.name, "Ada prep game");
 
+const freshDefaultDraft = {
+  ...game,
+  id: "fresh-default-draft",
+  name: defaultGameName,
+  pgn: "",
+  moves: [],
+  annotations: {},
+};
+assert.equal(hasMeaningfulGameContent(freshDefaultDraft), false);
+assert.equal(
+  shouldWarnBeforeReplacingGame({
+    game: freshDefaultDraft,
+    isDraftGame: true,
+    hasUnsavedChanges: true,
+  }),
+  false,
+);
+assert.equal(
+  parsePgnImportPreview(lineforgeDemoPgn, shouldWarnBeforeReplacingGame({
+    game: freshDefaultDraft,
+    isDraftGame: true,
+    hasUnsavedChanges: true,
+  })).preview.hasUnsavedWarning,
+  false,
+);
+
+const meaningfulDraft = { ...freshDefaultDraft, name: "Tournament prep" };
+assert.equal(hasMeaningfulGameContent(meaningfulDraft), true);
+assert.equal(
+  shouldWarnBeforeReplacingGame({
+    game: meaningfulDraft,
+    isDraftGame: true,
+    hasUnsavedChanges: true,
+  }),
+  true,
+);
+
 let library = createEmptyLibrary();
 assert.equal(hasUnsavedChanges(library, game), true);
 library = upsertSavedGame(library, game, "Smoke saved game");
@@ -2527,6 +2597,14 @@ assert.equal(library.savedGames.length, 1);
 assert.equal(loadSavedGame(library, "game-smoke").name, "Smoke saved game");
 const savedSmokeGame = loadSavedGame(library, "game-smoke");
 assert.equal(hasUnsavedChanges(library, savedSmokeGame), false);
+assert.equal(
+  shouldWarnBeforeReplacingGame({
+    game: savedSmokeGame,
+    isDraftGame: false,
+    hasUnsavedChanges: true,
+  }),
+  true,
+);
 const unsavedSmokeGame = {
   ...savedSmokeGame,
   annotations: {

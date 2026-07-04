@@ -11,6 +11,15 @@ import type {
 
 const UNKNOWN = "Unknown";
 
+export const LINEFORGE_DEMO_PGN = `[Event "LineForge Demo"]
+[Site "Local"]
+[Date "2026.07.03"]
+[White "Demo White"]
+[Black "Demo Black"]
+[Result "1-0"]
+
+1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0`;
+
 export function parsePgnImportPreview(
   pgn: string,
   hasUnsavedChanges: boolean,

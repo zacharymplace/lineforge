@@ -23,6 +23,29 @@ export function getDisplayGameName(game: Pick<LineForgeGame, "name"> | string | 
   return normalizeDefaultGameName(typeof game === "string" ? game : game?.name);
 }
 
+export function hasMeaningfulGameContent(
+  game: Pick<LineForgeGame, "name" | "pgn" | "moves" | "annotations">,
+) {
+  return (
+    game.moves.length > 0 ||
+    Boolean(game.pgn.trim()) ||
+    Object.keys(game.annotations).length > 0 ||
+    normalizeDefaultGameName(game.name) !== DEFAULT_GAME_NAME
+  );
+}
+
+export function shouldWarnBeforeReplacingGame({
+  game,
+  isDraftGame,
+  hasUnsavedChanges,
+}: {
+  game: Pick<LineForgeGame, "name" | "pgn" | "moves" | "annotations">;
+  isDraftGame: boolean;
+  hasUnsavedChanges: boolean;
+}) {
+  return isDraftGame ? hasMeaningfulGameContent(game) : hasUnsavedChanges;
+}
+
 export function createEmptyGame(): LineForgeGame {
   const chess = new Chess();
   const now = new Date().toISOString();

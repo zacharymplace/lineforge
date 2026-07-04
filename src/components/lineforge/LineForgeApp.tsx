@@ -49,8 +49,8 @@ import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledge
 import {
   createEmptyGame,
   createGameFromChess,
-  getDisplayGameName,
   loadGameAtPly,
+  shouldWarnBeforeReplacingGame,
   tryMove,
 } from "@/lib/move-ledger/game";
 import {
@@ -193,7 +193,11 @@ export function LineForgeApp() {
   );
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
-  const activeGameDisplayName = isDraftGame ? getDisplayGameName(game) : game.name;
+  const shouldWarnOnImport = shouldWarnBeforeReplacingGame({
+    game,
+    isDraftGame,
+    hasUnsavedChanges: hasDirtyGame,
+  });
   const selectedCard = cards.find((card) => card.id === selectedCardId) ?? cards[0] ?? null;
   const currentAnnotation = game.annotations[currentPly];
   const sourceGameNames = useMemo(
@@ -252,7 +256,7 @@ export function LineForgeApp() {
   }
 
   function handlePreviewPgn(pgn: string) {
-    const result = parsePgnImportPreview(pgn, hasDirtyGame);
+    const result = parsePgnImportPreview(pgn, shouldWarnOnImport);
 
     return result.ok
       ? { preview: result.preview, error: null }
@@ -517,7 +521,7 @@ export function LineForgeApp() {
               </p>
             </div>
             <div className="max-w-full rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
-              Local-first · no accounts · optional local engine · {activeGameDisplayName}
+              Local-first · no accounts · optional local engine
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -612,7 +616,7 @@ export function LineForgeApp() {
                 game={game}
                 fen={replayChess.fen()}
                 pgn={replayChess.pgn()}
-                hasUnsavedChanges={hasDirtyGame}
+                hasUnsavedChanges={shouldWarnOnImport}
                 onPreviewPgn={handlePreviewPgn}
                 onConfirmImport={handleConfirmImport}
                 onCancelImport={handleCancelImport}
