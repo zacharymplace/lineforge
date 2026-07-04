@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { CoachLensComparison } from "./CoachLensComparison";
 import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
+import { OpeningWeaknessTrendPanel } from "./OpeningWeaknessTrendPanel";
 import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
 import { evaluateDrillMove } from "@/lib/drill-queue/review";
@@ -29,6 +30,10 @@ import {
   type OpeningWeaknessBucket,
   type OpeningWeaknessMap,
 } from "@/lib/mistake-graph/opening-weakness-map";
+import type {
+  OpeningWeaknessTrend,
+  OpeningWeaknessTrendBucket,
+} from "@/lib/mistake-graph/opening-weakness-trends";
 import {
   MISTAKE_TAGS,
   MOVE_VERDICTS,
@@ -43,6 +48,7 @@ type ReviewSessionPanelProps = {
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
   openingMap?: OpeningWeaknessMap;
+  openingTrend?: OpeningWeaknessTrend;
   activeGameId?: string | null;
   onRecordCardReview: (cardId: string, result: ReviewResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
@@ -56,6 +62,7 @@ export function ReviewSessionPanel({
   comparisonLensIds,
   sessionSummaries = [],
   openingMap,
+  openingTrend,
   activeGameId,
   onRecordCardReview,
   onCompleteSession,
@@ -102,6 +109,10 @@ export function ReviewSessionPanel({
     );
     setSession(nextSession);
     setLastSummary(null);
+  }
+
+  function startOpeningTrendBucketSession(bucket: OpeningWeaknessTrendBucket) {
+    startOpeningWeaknessCardIdsSession(bucket.cardIds, bucket.bucketId);
   }
 
   function recordResult(
@@ -331,6 +342,12 @@ export function ReviewSessionPanel({
           activeGameId={activeGameId}
           onStartBucketReview={startOpeningWeaknessBucketSession}
           onStartCardIdsReview={(cardIds) => startOpeningWeaknessCardIdsSession(cardIds)}
+        />
+      ) : null}
+      {openingTrend ? (
+        <OpeningWeaknessTrendPanel
+          trend={openingTrend}
+          onStartBucketReview={startOpeningTrendBucketSession}
         />
       ) : null}
       <ReviewSessionHistoryPanel

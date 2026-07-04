@@ -34,6 +34,7 @@ import {
 import type { EngineAnalysisResult } from "@/lib/engine/types";
 import { createMistakeCard } from "@/lib/mistake-graph/cards";
 import { buildOpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
+import { buildOpeningWeaknessTrend } from "@/lib/mistake-graph/opening-weakness-trends";
 import { calculateMistakeStats } from "@/lib/mistake-graph/stats";
 import { emptyAnnotation } from "@/lib/move-ledger/annotations";
 import { createBackup, parseBackupJson, serializeBackup } from "@/lib/move-ledger/backup";
@@ -132,6 +133,10 @@ export function LineForgeApp() {
   const openingMap = useMemo(
     () => buildOpeningWeaknessMap(library.savedGames, cards),
     [cards, library.savedGames],
+  );
+  const openingTrend = useMemo(
+    () => buildOpeningWeaknessTrend(openingMap, cards, sessionSummaries),
+    [cards, openingMap, sessionSummaries],
   );
   const isDraftGame = !isGameSaved(library, game.id);
   const hasDirtyGame = hasUnsavedChanges(library, game);
@@ -542,12 +547,14 @@ export function LineForgeApp() {
           stats={stats}
           sessionSummaries={sessionSummaries}
           openingMap={openingMap}
+          openingTrend={openingTrend}
         />
         <ReviewSessionPanel
           cards={cards}
           comparisonLensIds={comparisonLensIds}
           sessionSummaries={sessionSummaries}
           openingMap={openingMap}
+          openingTrend={openingTrend}
           activeGameId={isDraftGame ? null : game.id}
           onRecordCardReview={handleSessionCardReview}
           onCompleteSession={handleCompleteSession}

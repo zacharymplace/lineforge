@@ -1100,6 +1100,166 @@ function buildOpeningWeaknessVisibleReviewSession(cards, signals) {
   );
 }
 
+function buildOpeningWeaknessTrend(openingMap, cards, sessionSummaries) {
+  const openingCardIds = new Set(openingMap.signals.map((signal) => signal.cardId));
+  const cardsById = new Map(cards.filter((currentCard) => openingCardIds.has(currentCard.id)).map((currentCard) => [currentCard.id, currentCard]));
+  const memberships = getOpeningBucketMemberships(openingMap);
+  const events = [
+    ...getOpeningAttemptTrendEvents(cardsById, memberships),
+    ...getOpeningSkippedTrendEvents(sessionSummaries, cardsById, memberships),
+  ];
+  const points = buildOpeningTrendPoints(events);
+  const buckets = buildOpeningTrendBuckets(points);
+
+  return {
+    points,
+    buckets,
+    summary: buildOpeningTrendSummary(points, buckets),
+  };
+}
+
+function getOpeningBucketMemberships(openingMap) {
+  const memberships = new Map();
+  for (const bucket of openingMap.buckets) {
+    for (const cardId of bucket.cardIds) {
+      memberships.set(cardId, [...(memberships.get(cardId) ?? []), { id: bucket.id, label: bucket.label }]);
+    }
+  }
+  return memberships;
+}
+
+function getOpeningAttemptTrendEvents(cardsById, memberships) {
+  const events = [];
+  for (const currentCard of cardsById.values()) {
+    for (const attempt of currentCard.attemptHistory ?? []) {
+      for (const bucket of memberships.get(currentCard.id) ?? []) {
+        events.push({
+          date: localDateKey(attempt.attemptedAt),
+          bucketId: bucket.id,
+          bucketLabel: bucket.label,
+          cardId: currentCard.id,
+          result: attempt.result,
+          tags: currentCard.tags,
+        });
+      }
+    }
+  }
+  return events;
+}
+
+function getOpeningSkippedTrendEvents(sessionSummaries, cardsById, memberships) {
+  const events = [];
+  for (const summary of sessionSummaries) {
+    for (const result of summary.results ?? []) {
+      if (result.result !== "skipped") continue;
+      const currentCard = cardsById.get(result.cardId);
+      if (!currentCard) continue;
+      for (const bucket of memberships.get(currentCard.id) ?? []) {
+        events.push({
+          date: localDateKey(result.recordedAt),
+          bucketId: bucket.id,
+          bucketLabel: bucket.label,
+          cardId: currentCard.id,
+          result: "skipped",
+          tags: currentCard.tags,
+        });
+      }
+    }
+  }
+  return events;
+}
+
+function buildOpeningTrendPoints(events) {
+  const pointMap = new Map();
+  for (const event of events) {
+    const key = `${event.date}:${event.bucketId}`;
+    pointMap.set(key, [...(pointMap.get(key) ?? []), event]);
+  }
+  return [...pointMap.values()]
+    .map(toOpeningTrendPoint)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.bucketLabel.localeCompare(b.bucketLabel));
+}
+
+function toOpeningTrendPoint(events) {
+  const remembered = events.filter((event) => event.result === "remembered").length;
+  const missed = events.filter((event) => event.result === "missed").length;
+  const skipped = events.filter((event) => event.result === "skipped").length;
+  return {
+    date: events[0].date,
+    bucketId: events[0].bucketId,
+    bucketLabel: events[0].bucketLabel,
+    reviewed: remembered + missed + skipped,
+    remembered,
+    missed,
+    skipped,
+    successRate: remembered + missed > 0 ? Math.round((remembered / (remembered + missed)) * 100) : 0,
+    cardIds: [...new Set(events.map((event) => event.cardId))],
+    topTags: getOpeningTopTags(events),
+  };
+}
+
+function buildOpeningTrendBuckets(points) {
+  const bucketMap = new Map();
+  for (const point of points) {
+    bucketMap.set(point.bucketId, [...(bucketMap.get(point.bucketId) ?? []), point]);
+  }
+  return [...bucketMap.values()].map(toOpeningTrendBucket).sort((a, b) => b.reviewed - a.reviewed || b.missed - a.missed);
+}
+
+function toOpeningTrendBucket(points) {
+  const remembered = points.reduce((total, point) => total + point.remembered, 0);
+  const missed = points.reduce((total, point) => total + point.missed, 0);
+  const skipped = points.reduce((total, point) => total + point.skipped, 0);
+  const successRate = remembered + missed > 0 ? Math.round((remembered / (remembered + missed)) * 100) : 0;
+  const recentSuccessRate = getPointSuccessRate(points.at(-1));
+  return {
+    bucketId: points[0].bucketId,
+    bucketLabel: points[0].bucketLabel,
+    reviewed: remembered + missed + skipped,
+    remembered,
+    missed,
+    skipped,
+    successRate,
+    recentSuccessRate,
+    successRateDelta: recentSuccessRate - getPointSuccessRate(points[0]),
+    cardIds: [...new Set(points.flatMap((point) => point.cardIds))],
+    topTags: getOpeningTopTags(points.flatMap((point) => point.topTags.map((tag) => ({ tags: [tag.tag] })))),
+  };
+}
+
+function buildOpeningTrendSummary(points, buckets) {
+  const latestDate = points.at(-1)?.date;
+  const latestPoints = latestDate ? points.filter((point) => point.date === latestDate) : [];
+  const latestRemembered = latestPoints.reduce((total, point) => total + point.remembered, 0);
+  const latestMissed = latestPoints.reduce((total, point) => total + point.missed, 0);
+  const improvingBucket = [...buckets].filter((bucket) => bucket.successRateDelta > 0).sort((a, b) => b.successRateDelta - a.successRateDelta)[0];
+  const worseningBucket = [...buckets].filter((bucket) => bucket.successRateDelta < 0).sort((a, b) => a.successRateDelta - b.successRateDelta)[0];
+  const mostReviewedBucket = [...buckets].sort((a, b) => b.reviewed - a.reviewed)[0];
+  const mostMissedBucket = [...buckets].sort((a, b) => b.missed - a.missed || b.reviewed - a.reviewed)[0];
+  return {
+    totalReviewed: points.reduce((total, point) => total + point.reviewed, 0),
+    latestDate,
+    latestSuccessRate: latestRemembered + latestMissed > 0 ? Math.round((latestRemembered / (latestRemembered + latestMissed)) * 100) : 0,
+    improvingBucket,
+    worseningBucket,
+    mostReviewedBucket,
+    mostMissedBucket,
+    recommendedNextFocus: mostMissedBucket?.missed
+      ? `Based on local review history, focus next on ${mostMissedBucket.bucketLabel.toLowerCase()}.`
+      : "Review opening cards to build a local trend history.",
+  };
+}
+
+function getPointSuccessRate(point) {
+  return point && point.remembered + point.missed > 0 ? point.successRate : 0;
+}
+
+function localDateKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function getTopMissedTags(session, cards) {
   const counts = new Map();
   for (const result of Object.values(session.results)) {
@@ -2363,6 +2523,104 @@ assert.deepEqual(visibleOpeningSession.selectedCardIds, [
   "other-game-opening-card",
 ]);
 assert.equal(buildFilteredOpeningWeaknessMap(openingMap, { reviewState: "all", tag: "time pressure" }).summary.totalOpeningCards, 0);
+function createDatedAttempt(card, result, attemptedAt) {
+  return {
+    id: `attempt-${card.id}-${result}-${attemptedAt}`,
+    attemptedAt,
+    expectedMoveSan: card.moveSan,
+    result,
+    method: "manual-reveal",
+  };
+}
+const trendCards = [
+  {
+    ...manualReviewed,
+    id: "trend-tactic-card",
+    sourceGameId: "opening-game",
+    ply: 6,
+    moveSan: "Bxf7+",
+    verdict: "mistake",
+    tags: ["missed tactic"],
+    attemptHistory: [],
+  },
+  {
+    ...manualReviewed,
+    id: "trend-king-card",
+    sourceGameId: "opening-game",
+    ply: 8,
+    moveSan: "O-O-O",
+    verdict: "mistake",
+    tags: ["king safety"],
+    attemptHistory: [],
+  },
+  {
+    ...manualReviewed,
+    id: "trend-plan-card",
+    sourceGameId: "opening-game",
+    ply: 10,
+    moveSan: "d6",
+    verdict: "mistake",
+    tags: ["plan mismatch"],
+    attemptHistory: [],
+  },
+  {
+    ...manualReviewed,
+    id: "trend-trade-card",
+    sourceGameId: "opening-game",
+    ply: 12,
+    moveSan: "Nxd5",
+    verdict: "mistake",
+    tags: ["bad trade"],
+    attemptHistory: [],
+  },
+];
+trendCards[0].attemptHistory = [
+  createDatedAttempt(trendCards[0], "missed", "2026-07-01T12:00:00.000Z"),
+  createDatedAttempt(trendCards[0], "remembered", "2026-07-02T12:00:00.000Z"),
+];
+trendCards[1].attemptHistory = [
+  createDatedAttempt(trendCards[1], "remembered", "2026-07-01T12:00:00.000Z"),
+  createDatedAttempt(trendCards[1], "missed", "2026-07-02T12:00:00.000Z"),
+];
+trendCards[2].attemptHistory = [
+  createDatedAttempt(trendCards[2], "missed", "2026-07-01T12:00:00.000Z"),
+  createDatedAttempt(trendCards[2], "missed", "2026-07-02T12:00:00.000Z"),
+];
+const trendMap = buildOpeningWeaknessMap([{ id: "opening-game", name: "Trend game" }], trendCards);
+const trendSessionSummary = {
+  ...sessionSummary,
+  id: "trend-session",
+  results: [
+    {
+      cardId: "trend-trade-card",
+      result: "skipped",
+      recordedAt: "2026-07-02T13:00:00.000Z",
+    },
+  ],
+};
+const openingTrend = buildOpeningWeaknessTrend(trendMap, trendCards, [trendSessionSummary]);
+assert.equal(openingTrend.points.find((point) => point.date === "2026-07-01" && point.bucketId === "missed-tactic").successRate, 0);
+assert.equal(openingTrend.points.find((point) => point.date === "2026-07-02" && point.bucketId === "missed-tactic").successRate, 100);
+assert.equal(openingTrend.points.find((point) => point.bucketId === "bad-trade").skipped, 1);
+assert.equal(openingTrend.buckets.find((bucket) => bucket.bucketId === "missed-tactic").successRateDelta, 100);
+assert.equal(openingTrend.summary.improvingBucket.bucketId, "missed-tactic");
+assert.equal(openingTrend.summary.worseningBucket.bucketId, "king-safety");
+assert.equal(openingTrend.summary.mostMissedBucket.bucketId, "plan-mismatch");
+assert.match(openingTrend.summary.recommendedNextFocus, /Based on local review history/i);
+const emptyOpeningTrend = buildOpeningWeaknessTrend(trendMap, trendCards.map((currentCard) => ({
+  ...currentCard,
+  attemptHistory: [],
+})), []);
+assert.equal(emptyOpeningTrend.points.length, 0);
+assert.equal(emptyOpeningTrend.summary.recommendedNextFocus, "Review opening cards to build a local trend history.");
+const trendFocusSession = buildReviewSession(
+  openingTrend.summary.mostMissedBucket.cardIds
+    .map((cardId) => trendCards.find((currentCard) => currentCard.id === cardId))
+    .filter(Boolean),
+  { type: "opening-weakness", bucketId: openingTrend.summary.mostMissedBucket.bucketId },
+  "all",
+);
+assert.deepEqual(trendFocusSession.selectedCardIds, ["trend-plan-card"]);
 
 const repeatedMissSummary = buildExplanationSummary({
   verdict: "mistake",
