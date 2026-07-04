@@ -59,7 +59,10 @@ DrillQueue owns active review behavior:
 - priority scoring from missed attempts, low success rate, important verdicts/tags, never-reviewed cards, and recent skipped results
 - due-review session creation from scheduled cards
 - schedule badges on mistake-card surfaces
-- DrillQueue due-status filters and persisted filter preference
+- DrillQueue combined filters for due status, source game, and last-reviewed recency
+- active filter chip helpers for non-default DrillQueue filters
+- selected-card fallback when the active card is hidden by filters
+- persisted due-status filter preference
 - review sessions built from filters, bucket card ids, or missed-only repeats
 - session sizing with persisted preferred size
 - completed session summaries and session history detail
@@ -124,7 +127,7 @@ LineForge keeps core data and lightweight preferences browser-local. Current pre
 - opening weakness map filters
 - DrillQueue due-status filter
 
-These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid.
+These helpers validate restored values and fall back to safe defaults when localStorage data is missing, malformed, or invalid. DrillQueue source-game and last-reviewed filters are session-local by design and do not add localStorage keys.
 
 ## UI Helpers
 

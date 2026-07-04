@@ -20,7 +20,7 @@ LineForge is a private post-game study app. It helps you import games, inspect t
 10. Drill individual cards or run filtered review sessions.
 11. Repeat missed cards and inspect session history.
 12. Follow deterministic due-review scheduling.
-13. Filter DrillQueue by due status.
+13. Filter DrillQueue by due status, source game, and last-reviewed recency.
 14. Map, filter, and trend opening weaknesses.
 15. Export review packets as Markdown or JSON.
 16. Back up local data as JSON.
@@ -74,16 +74,15 @@ Mistake-card surfaces show compact text-based schedule badges. Badges expose the
 
 ### DrillQueue Filtering
 
-The DrillQueue card list can be filtered by:
+The DrillQueue card list can combine three lightweight local filters:
 
-- all cards
-- due now
-- due soon
-- new
-- stable
-- high priority
+- Due status: all cards, due now, due soon, new, stable, and high priority.
+- Source game: all games, current active saved game, or saved games that have cards.
+- Last reviewed: all cards, never reviewed, reviewed today, reviewed in the last 7 days, or not reviewed in 7+ days.
 
-Filtering only changes the visible list. It does not mutate cards or review history. If the selected card is hidden by a filter, DrillQueue selects the first visible card when available; if no cards match, it shows a clear empty state. The preferred due-status filter persists locally and shows a subtle "Filter saved locally" confirmation after changes.
+Filtering only changes the visible list. It does not mutate cards or review history. If the selected card is hidden by a filter, DrillQueue selects the first visible card when available; if no cards match, it shows a clear empty state with the active filters.
+
+Non-default filters appear as compact chips. Each chip can clear one filter, while Reset filters clears due status, source game, and last-reviewed filters together. The preferred due-status filter persists locally and shows a subtle "Filter saved locally" confirmation after changes. Source-game and last-reviewed filters are intentionally session-local.
 
 ### Optional Local Stockfish Analysis
 
@@ -152,12 +151,12 @@ LineForge uses small internal domains:
 
 - **MoveLedger**: game state, PGN import, saved game library, annotations, localStorage, and backup data.
 - **MistakeGraph**: mistake cards, aggregate mistake statistics, and opening weakness maps.
-- **DrillQueue**: active card review, move-answer evaluation, attempt history, review scheduling, schedule badges, due-status filtering, review sessions, session history, and session/filter preferences.
+- **DrillQueue**: active card review, move-answer evaluation, attempt history, review scheduling, schedule badges, combined DrillQueue filtering, active filter chips, selected-card fallback, review sessions, session history, and session/filter preferences.
 - **Engine**: optional local Stockfish adapter, engine result formatting, depth preferences, and analysis attachment helpers.
 - **Explanations**: deterministic review summaries and drill recommendations.
 - **CoachLenses**: deterministic learning perspectives, lens comparison, and comparison preferences.
 - **ReviewPackets**: compact JSON/Markdown packet construction, preview, filenames, and local download.
-- **Preferences/localStorage helpers**: browser-local preferences for engine depth, coach lens comparison, review-session size, opening weakness filters, and DrillQueue due-status filter.
+- **Preferences/localStorage helpers**: browser-local preferences for engine depth, coach lens comparison, review-session size, opening weakness filters, and DrillQueue due-status filter. Source-game and last-reviewed DrillQueue filters stay session-local by design.
 - **UI helpers**: small shared UI utilities such as `ScheduleBadge` and accessible `StatusHint` for polite saved/status messages.
 
 More detail lives in [`docs/architecture.md`](docs/architecture.md).
@@ -188,6 +187,7 @@ npm run build
 
 - Core study data is stored in browser `localStorage`.
 - Browser-local preferences store engine depth, coach lens comparison, review-session size, opening weakness map filters, and DrillQueue due-status filter.
+- DrillQueue source-game and last-reviewed filters are session-local and are not written to persistent storage.
 - Backup/export uses local JSON files.
 - Review packets download as local Markdown or JSON.
 - Engine analysis uses local browser Stockfish and is optional.
@@ -209,8 +209,10 @@ Disciplined next steps:
 
 - Review other transient error/status messages for polite status semantics.
 - Add a stronger focus trap/dialog primitive if more modals are added.
-- Add a review calendar/scheduling layer without external calendar integration first.
+- Add a local review calendar layer without external calendar integration first.
+- Add configurable scheduling intervals.
 - Refine opening weakness trends over time.
+- Run a broader accessibility review for complex flows.
 - Add an optional AI coach layer only after deterministic review logic remains stable.
 
 See [`docs/roadmap.md`](docs/roadmap.md) for more detail.

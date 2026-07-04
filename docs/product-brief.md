@@ -23,7 +23,7 @@ LineForge turns raw games into:
 - review sessions with missed-only repeats
 - inspectable review-session history
 - local deterministic due-review scheduling
-- schedule badges and DrillQueue due-status filtering
+- schedule badges and DrillQueue filtering by due status, source game, and review recency
 - deterministic review summaries
 - deterministic coach lens comparisons
 - deterministic opening weakness maps
@@ -43,7 +43,7 @@ LineForge turns raw games into:
 10. Run filtered review sessions with a persisted size preference.
 11. Repeat missed cards and inspect session history.
 12. Review locally scheduled due cards.
-13. Filter DrillQueue by due status.
+13. Filter DrillQueue by due status, source game, and last-reviewed recency.
 14. Map opening weaknesses from early-game cards.
 15. Filter opening weakness buckets and review visible cards.
 16. Inspect opening weakness trends.
@@ -65,7 +65,15 @@ The schedule panel can start a due-review session. It chooses due-now cards firs
 
 Mistake-card surfaces show text-based schedule badges with review status, priority label, success rate, last reviewed date, and a short recommended action. Badges are derived from the same shared schedule helpers used by the schedule panel.
 
-DrillQueue can filter the card list by all cards, due now, due soon, new, stable, and high priority. Filtering is non-mutating. If the selected card is hidden, DrillQueue selects the first visible card when available; if no cards match, it shows a clear empty state. The preferred filter persists locally and shows "Filter saved locally" after changes.
+DrillQueue can combine:
+
+- due-status filters: all cards, due now, due soon, new, stable, and high priority
+- source-game filters: all games, current active saved game, and saved games with cards
+- last-reviewed filters: all cards, never reviewed, reviewed today, reviewed in the last 7 days, and not reviewed in 7+ days
+
+Filtering is non-mutating. If the selected card is hidden, DrillQueue selects the first visible card when available; if no cards match, it shows a clear empty state. Non-default filters appear as compact chips, and each chip can clear one filter without resetting the others. Reset filters clears the full DrillQueue filter state.
+
+The due-status filter persists locally and shows "Filter saved locally" after changes. Source-game and last-reviewed filters are intentionally session-local so they do not add more persistent preference state.
 
 ## Opening Weakness Map
 
@@ -96,6 +104,8 @@ LineForge stores lightweight browser-local preferences for:
 - review-session size
 - opening weakness map filters
 - DrillQueue due-status filter
+
+DrillQueue source-game and last-reviewed filters are session-local by design. They help inspection in the current session without expanding the durable preference surface.
 
 Saved preference hints use a shared accessible `StatusHint` with polite status semantics, so messages such as "Filter saved locally" and "Filters saved locally" remain subtle while still being exposed to assistive technology.
 
