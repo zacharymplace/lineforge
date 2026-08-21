@@ -23,7 +23,7 @@
     },
     {
       "kind": "validation",
-      "reference": "npm run test",
+      "reference": "node scripts/lineforge-smoke.mjs",
       "result": "pass"
     },
     {
