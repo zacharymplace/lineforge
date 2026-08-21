@@ -1,0 +1,78 @@
+{
+  "schema_version": "systems-builder-lifecycle-v1",
+  "system_id": "lineforge",
+  "display_name": "LineForge",
+  "phase": "build",
+  "condition": "active",
+  "source": {
+    "repository": "zacharymplace/lineforge",
+    "path": ".",
+    "branch": "main",
+    "commit": "4970f91"
+  },
+  "evidence": [
+    {
+      "kind": "validation",
+      "reference": "npm run lint",
+      "result": "pass"
+    },
+    {
+      "kind": "validation",
+      "reference": "npm run build",
+      "result": "pass"
+    },
+    {
+      "kind": "validation",
+      "reference": "npm run test",
+      "result": "pass"
+    },
+    {
+      "kind": "product-baseline",
+      "reference": "README.md",
+      "result": "local-first deterministic chess review product has a substantial implemented workflow surface"
+    },
+    {
+      "kind": "roadmap",
+      "reference": "docs/roadmap.md",
+      "result": "active implementation roadmap contains concrete unfinished internal work"
+    },
+    {
+      "kind": "portfolio-readiness",
+      "reference": "docs/demo-walkthrough.md",
+      "result": "built-in demo walkthrough already defines the five workflow surfaces needed for portfolio evidence"
+    }
+  ],
+  "next_action": {
+    "description": "Capture a consistent screenshot set for the Play, Study, Review, Weaknesses, and Data workflows using the built-in demo game and the existing demo walkthrough, then reconcile the case study and portfolio-facing documentation against that captured product evidence before moving to the next roadmap item."
+  },
+  "blockers": [],
+  "progress": {
+    "core_local_review_loop": "implemented",
+    "demo_game": "implemented",
+    "demo_walkthrough": "implemented",
+    "case_study": "implemented",
+    "portfolio_screenshot_set": "not_started",
+    "sample_data_walkthrough": "planned",
+    "portfolio_page_integration": "planned",
+    "static_demo_deployment": "optional_not_adopted",
+    "ai_coach_layer": "optional_not_adopted"
+  },
+  "capabilities": [
+    "pgn-import-preview",
+    "local-game-ledger",
+    "move-annotation",
+    "mistake-card-generation",
+    "drill-queue",
+    "review-sessions",
+    "deterministic-review-scheduling",
+    "schedule-presets",
+    "opening-weakness-map",
+    "opening-weakness-trends",
+    "local-engine-analysis",
+    "deterministic-review-summaries",
+    "review-packet-export",
+    "local-backup-export",
+    "portfolio-demo-walkthrough",
+    "responsive-workflow-navigation"
+  ]
+}
