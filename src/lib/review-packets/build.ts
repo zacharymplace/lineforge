@@ -58,6 +58,7 @@ export function buildCardReviewPacket(input: CardReviewPacketInput): ReviewPacke
     id: createPacketId("card"),
     lineforgeReviewPacketVersion: LINEFORGE_REVIEW_PACKET_VERSION,
     sourceType: "card",
+    correction: input.card.correction,
     sourceGameId: input.card.sourceGameId,
     sourceGameName: input.sourceGameName,
     ply: input.card.ply,

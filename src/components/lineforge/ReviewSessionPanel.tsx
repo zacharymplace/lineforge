@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CorrectionAnswer } from "./CorrectionAnswer";
+import { ReviewMoveInput } from "./ReviewMoveInput";
 import { Chessboard } from "react-chessboard";
 import { CoachLensComparison } from "./CoachLensComparison";
 import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
@@ -9,7 +11,7 @@ import { ReviewSchedulePanel } from "./ReviewSchedulePanel";
 import { ReviewSessionHistoryPanel } from "./ReviewSessionHistoryPanel";
 import { ScheduleBadge } from "./ScheduleBadge";
 import type { CoachLensId } from "@/lib/coach-lenses/types";
-import { evaluateDrillMove } from "@/lib/drill-queue/review";
+import { evaluateDrillMove, evaluateDrillSan, getReviewTarget } from "@/lib/drill-queue/review";
 import type { ReviewScheduleSummary } from "@/lib/drill-queue/schedule";
 import type {
   ReviewScheduleIntervalPreset,
@@ -45,6 +47,7 @@ import {
   MISTAKE_TAGS,
   MOVE_VERDICTS,
   type MistakeCard,
+  type DrillAttemptResult,
   type MistakeTag,
   type MoveVerdict,
   type ReviewResult,
@@ -52,6 +55,7 @@ import {
 
 type ReviewSessionPanelProps = {
   cards: MistakeCard[];
+  onSessionActiveChange?: (active: boolean) => void;
   comparisonLensIds: CoachLensId[];
   sessionSummaries?: ReviewSessionSummary[];
   reviewSchedule?: ReviewScheduleSummary;
@@ -61,7 +65,7 @@ type ReviewSessionPanelProps = {
   openingMap?: OpeningWeaknessMap;
   openingTrend?: OpeningWeaknessTrend;
   activeGameId?: string | null;
-  onRecordCardReview: (cardId: string, result: ReviewResult) => void;
+  onRecordCardReview: (cardId: string, result: ReviewResult, played?: DrillAttemptResult) => void;
   onCompleteSession: (summary: ReviewSessionSummary) => void;
   onClearSessionHistory?: () => void;
   onRequestReviewView?: () => void;
@@ -74,6 +78,7 @@ type FilterKind = Exclude<
 
 export function ReviewSessionPanel({
   cards,
+  onSessionActiveChange,
   comparisonLensIds,
   sessionSummaries = [],
   reviewSchedule,
@@ -94,6 +99,8 @@ export function ReviewSessionPanel({
   const [sessionSize, setSessionSize] = useState<ReviewSessionSize>(() =>
     loadReviewSessionSizePreference(),
   );
+  const [revealed, setRevealed] = useState(false);
+  const [pendingAttempt, setPendingAttempt] = useState<DrillAttemptResult | null>(null);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [lastSummary, setLastSummary] = useState<ReviewSessionSummary | null>(null);
   const filter = useMemo(
@@ -109,18 +116,24 @@ export function ReviewSessionPanel({
       ? reviewSchedule.items.find((item) => item.cardId === currentCardId)
       : undefined;
   const currentCardActionLabel = currentCard
-    ? `card ${session ? session.currentCardIndex + 1 : 1}, expected move ${currentCard.moveSan}`
+    ? `card ${session ? session.currentCardIndex + 1 : 1}`
     : "current card";
 
   function startSession() {
     const nextSession = buildReviewSession(cards, filter, sessionSize);
+    setRevealed(false);
+    setPendingAttempt(null);
     setSession(nextSession);
+    onSessionActiveChange?.(Boolean(nextSession && nextSession.selectedCardIds.length > 0));
     setLastSummary(null);
   }
 
   function startMissedOnlyRepeatSession(summary: ReviewSessionSummary) {
     const nextSession = buildMissedOnlyRepeatSession(cards, summary);
+    setRevealed(false);
+    setPendingAttempt(null);
     setSession(nextSession);
+    onSessionActiveChange?.(Boolean(nextSession && nextSession.selectedCardIds.length > 0));
     setLastSummary(null);
   }
 
@@ -134,7 +147,10 @@ export function ReviewSessionPanel({
       cardIds,
       { type: "opening-weakness", bucketId },
     );
+    setRevealed(false);
+    setPendingAttempt(null);
     setSession(nextSession);
+    onSessionActiveChange?.(Boolean(nextSession && nextSession.selectedCardIds.length > 0));
     setLastSummary(null);
     onRequestReviewView?.();
   }
@@ -145,7 +161,10 @@ export function ReviewSessionPanel({
 
   function startDueReviewSession(cardIds: string[]) {
     const nextSession = buildReviewSessionFromCardIds(cards, cardIds, { type: "due-review" });
+    setRevealed(false);
+    setPendingAttempt(null);
     setSession(nextSession);
+    onSessionActiveChange?.(Boolean(nextSession && nextSession.selectedCardIds.length > 0));
     setLastSummary(null);
   }
 
@@ -161,14 +180,17 @@ export function ReviewSessionPanel({
     }
 
     if (result !== "skipped") {
-      onRecordCardReview(currentCard.id, result);
+      onRecordCardReview(currentCard.id, result, pendingAttempt ?? undefined);
     }
 
     const nextSession = recordReviewSessionResult(session, currentCard.id, result, {
-      expectedMoveSan: currentCard.moveSan,
+      expectedMoveSan: getReviewTarget(currentCard).moveSan,
       ...details,
     });
+    setRevealed(false);
+    setPendingAttempt(null);
     setSession(nextSession);
+    onSessionActiveChange?.(Boolean(nextSession && nextSession.selectedCardIds.length > 0));
 
     if (nextSession.currentCardIndex >= nextSession.selectedCardIds.length) {
       finishSession(nextSession);
@@ -183,6 +205,7 @@ export function ReviewSessionPanel({
     const summary = completeReviewSession(sessionToComplete, cards);
     setLastSummary(summary);
     setSession(null);
+    onSessionActiveChange?.(false);
     onCompleteSession(summary);
   }
 
@@ -192,11 +215,8 @@ export function ReviewSessionPanel({
     }
 
     const result = evaluateDrillMove(currentCard, sourceSquare, targetSquare);
-    recordResult(result.reviewResult, {
-      attemptedMoveSan: result.attemptedSan ?? undefined,
-      attemptedFenAfter: result.attemptedFenAfter ?? undefined,
-      expectedMoveSan: result.expectedSan,
-    });
+    setPendingAttempt(result);
+    setRevealed(true);
     return result.isMatch;
   }
 
@@ -295,7 +315,7 @@ export function ReviewSessionPanel({
       ) : null}
 
       {session && currentCard ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
           <div className="grid gap-3">
             <div className="text-sm text-stone-500" role="status" aria-live="polite">
               Card {session.currentCardIndex + 1} of {session.selectedCardIds.length}
@@ -308,11 +328,12 @@ export function ReviewSessionPanel({
                 options={{
                   id: `session-${session.id}-${currentCard.id}`,
                   position: currentCard.fenBefore,
-                  boardStyle: { borderRadius: "6px" },
+                  allowDragging: !revealed,
+                  boardStyle: { borderRadius: "6px", aspectRatio: "1 / 1", height: "auto" },
                   darkSquareStyle: { backgroundColor: "#6f5b43" },
                   lightSquareStyle: { backgroundColor: "#d7c7a4" },
                   onPieceDrop: ({ sourceSquare, targetSquare }) => {
-                    if (!targetSquare) {
+                    if (!targetSquare || revealed) {
                       return false;
                     }
 
@@ -325,8 +346,8 @@ export function ReviewSessionPanel({
 
           <div className="grid gap-3">
             <div className="rounded-md bg-black/30 p-3 text-sm">
-              <div className="font-mono text-amber-100">{currentCard.moveSan}</div>
-              <div className="text-stone-300">{currentCard.prompt}</div>
+              <div className="text-amber-100">{currentCard.correction ? "Correction card" : "Game recall"}</div>
+              <div className="text-stone-300">{currentCard.correction ? "Play your saved correction." : `Find the move played on ply ${currentCard.ply}.`}</div>
               <div className="text-xs text-stone-500">
                 {currentCard.verdict} · {currentCard.tags.join(", ") || "no tags"}
               </div>
@@ -335,8 +356,19 @@ export function ReviewSessionPanel({
               </div>
             </div>
 
+            {!revealed ? <>
+              <ReviewMoveInput key={currentCard.id} onAttempt={san => { setPendingAttempt(evaluateDrillSan(currentCard, san)); setRevealed(true); }} />
+              <button className="lf-button" onClick={() => setRevealed(true)}>Reveal session answer</button>
+            </> : <>
+              <CorrectionAnswer card={currentCard} />
+              {pendingAttempt ? <div role="status">
+                <p>{pendingAttempt.isMatch ? "Matches your saved target." : `Does not match your saved target. Played: ${pendingAttempt.attemptedSan ?? "invalid move"}.`}</p>
+                <button className="lf-button-primary" onClick={() => recordResult(pendingAttempt.reviewResult, { attemptedMoveSan: pendingAttempt.attemptedSan ?? undefined, attemptedFenAfter: pendingAttempt.attemptedFenAfter ?? undefined, expectedMoveSan: pendingAttempt.expectedSan })}>Record result and continue</button>
+              </div> : null}
+            </>}
             <div className="flex flex-wrap gap-2">
               <button
+                disabled={!revealed || Boolean(pendingAttempt)}
                 className="lf-button-primary"
                 aria-label={`Mark ${currentCardActionLabel} as remembered`}
                 onClick={() => recordResult("remembered")}
@@ -345,6 +377,7 @@ export function ReviewSessionPanel({
               </button>
               <button
                 className="lf-button"
+                disabled={!revealed || Boolean(pendingAttempt)}
                 aria-label={`Mark ${currentCardActionLabel} as missed`}
                 onClick={() => recordResult("missed")}
               >
@@ -352,6 +385,7 @@ export function ReviewSessionPanel({
               </button>
               <button
                 className="lf-button"
+                disabled={Boolean(pendingAttempt)}
                 aria-label={`Skip ${currentCardActionLabel}`}
                 onClick={() => recordResult("skipped")}
               >
@@ -366,7 +400,7 @@ export function ReviewSessionPanel({
               </button>
             </div>
 
-            <CoachLensComparison
+            {revealed ? <CoachLensComparison
               input={{
                 moveSan: currentCard.moveSan,
                 ply: currentCard.ply,
@@ -382,7 +416,7 @@ export function ReviewSessionPanel({
               }}
               selectedLensIds={comparisonLensIds}
               onSelectedLensIdsChange={() => undefined}
-            />
+            /> : null}
           </div>
         </div>
       ) : null}
@@ -414,7 +448,7 @@ export function ReviewSessionPanel({
           onStartBucketReview={startOpeningTrendBucketSession}
         />
       ) : null}
-      {displayMode === "review" && reviewSchedule ? (
+      {displayMode === "review" && !session && reviewSchedule ? (
         <ReviewSchedulePanel
           schedule={reviewSchedule}
           preferences={schedulePreferences}
@@ -422,13 +456,13 @@ export function ReviewSessionPanel({
           onStartDueReview={startDueReviewSession}
         />
       ) : null}
-      {displayMode === "review" ? (
-        <ReviewSessionHistoryPanel
+      {displayMode === "review" && !session ? (
+        <details><summary className="lf-button cursor-pointer">Completed session history (includes answers)</summary><ReviewSessionHistoryPanel
           summaries={sessionSummaries}
           cards={cards}
           onReviewMissedAgain={startMissedOnlyRepeatSession}
           onClearHistory={onClearSessionHistory ?? (() => undefined)}
-        />
+        /></details>
       ) : null}
     </>
   );

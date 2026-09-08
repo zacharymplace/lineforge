@@ -117,3 +117,11 @@ Near-term public-facing work should focus on presentation and verification:
 - add an optional AI coach layer only after the deterministic core remains stable
 
 See [`roadmap.md`](roadmap.md) for the active implementation roadmap.
+
+## Verification status
+
+A [local demo review on September 7](demo-review-2026-09-07.md) exercised import, annotation, cards, a review session, weakness summaries, and packet preview. It also repaired PGN metadata and custom-position preservation during replay. Captures are saved in `screenshots/`; they are development evidence rather than finished portfolio artwork. No learning-effect or real-player adoption claim has been validated. The next product priority is correction cards: the current drill target is the originally played move, even when marked as a blunder.
+
+## Correction-card follow-up
+
+The correction-card flow is now implemented locally. See [correction cards](correction-cards.md) for creation, hidden-answer review, provenance, compatibility, and verification limits. Existing cards remain game-recall cards; the earlier walkthrough describes the pre-correction behavior.

@@ -90,7 +90,7 @@ export function createGameFromChess(
     id: existing?.id ?? createGameId(),
     name: existing?.name ?? DEFAULT_GAME_NAME,
     pgn: chess.pgn(),
-    initialFen: existing?.initialFen ?? STARTING_FEN,
+    initialFen: chess.history({ verbose: true })[0]?.before ?? chess.fen(),
     fen: chess.fen(),
     moves: toLineForgeMoves(chess.history({ verbose: true })),
     annotations: existing?.annotations ?? {},
@@ -102,10 +102,13 @@ export function createGameFromChess(
 
 export function loadGameAtPly(game: LineForgeGame, ply: number) {
   const chess = new Chess();
-  const safePly = Math.max(0, Math.min(ply, game.moves.length));
+  // Replay the canonical PGN so headers, comments, and custom starts survive edits.
+  chess.loadPgn(game.pgn, { strict: false });
+  const totalPlies = chess.history().length;
+  const safePly = Math.max(0, Math.min(Math.trunc(ply) || 0, totalPlies));
 
-  for (const move of game.moves.slice(0, safePly)) {
-    chess.move(move.san);
+  for (let remaining = totalPlies; remaining > safePly; remaining--) {
+    chess.undo();
   }
 
   return chess;

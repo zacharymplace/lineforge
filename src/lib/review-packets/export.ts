@@ -20,6 +20,7 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket) {
     packet.fenBefore ? `FEN before: \`${packet.fenBefore}\`` : "FEN before: Unknown",
     packet.fenAfter ? `FEN after: \`${packet.fenAfter}\`` : undefined,
     "",
+    ...(packet.correction ? ["## Saved correction", "", `Target: ${packet.correction.moveSan}`, packet.correction.reason, `Source: ${packet.correction.source}`, `Saved: ${packet.correction.savedAt}`, `Target FEN: ${packet.correction.fenAfter}`, ""] : []),
     "## Move",
     packet.ply ? `Ply: ${packet.ply}` : undefined,
     packet.moveSan ? `Move: ${packet.moveSan}` : "Move: Unknown",

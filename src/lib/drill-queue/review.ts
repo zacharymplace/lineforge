@@ -7,12 +7,17 @@ import type {
   ReviewResult,
 } from "../move-ledger/types";
 
+export function getReviewTarget(card: MistakeCard) {
+  return card.correction ?? { moveSan: card.moveSan, fenAfter: card.fenAfter };
+}
+
 export function evaluateDrillMove(
   card: MistakeCard,
   sourceSquare: string,
   targetSquare: string,
 ): DrillAttemptResult {
   const chess = new Chess(card.fenBefore);
+  const target = getReviewTarget(card);
 
   try {
     const attemptedMove = chess.move({
@@ -20,13 +25,13 @@ export function evaluateDrillMove(
       to: targetSquare as Square,
       promotion: "q",
     });
-    const isMatch = attemptedMove.san === card.moveSan || chess.fen() === card.fenAfter;
+    const isMatch = attemptedMove.san === target.moveSan || chess.fen() === target.fenAfter;
 
     return {
       reviewResult: isMatch ? "remembered" : "missed",
       attemptedSan: attemptedMove.san,
       attemptedFenAfter: chess.fen(),
-      expectedSan: card.moveSan,
+      expectedSan: target.moveSan,
       isMatch,
     };
   } catch {
@@ -34,7 +39,7 @@ export function evaluateDrillMove(
       reviewResult: "missed",
       attemptedSan: null,
       attemptedFenAfter: null,
-      expectedSan: card.moveSan,
+      expectedSan: target.moveSan,
       isMatch: false,
     };
   }
@@ -52,7 +57,7 @@ export function createDrillAttempt(
     attemptedAt: new Date().toISOString(),
     attemptedMoveSan: attemptedSan ?? undefined,
     attemptedFenAfter: attemptedFenAfter ?? undefined,
-    expectedMoveSan: card.moveSan,
+    expectedMoveSan: getReviewTarget(card).moveSan,
     result,
     method,
   };
@@ -94,4 +99,16 @@ export function normalizeCardReviewStats(card: MistakeCard): MistakeCard {
     correct: attemptHistory.filter((attempt) => attempt.result === "remembered").length,
     lastReviewedAt: attemptHistory.at(-1)?.attemptedAt,
   };
+}
+
+export function evaluateDrillSan(card: MistakeCard, san: string): DrillAttemptResult {
+  const chess = new Chess(card.fenBefore);
+  const target = getReviewTarget(card);
+  try {
+    const move = chess.move(san.trim(), { strict: true });
+    const isMatch = move.san === target.moveSan;
+    return { reviewResult: isMatch ? "remembered" : "missed", attemptedSan: move.san, attemptedFenAfter: chess.fen(), expectedSan: target.moveSan, isMatch };
+  } catch {
+    return { reviewResult: "missed", attemptedSan: null, attemptedFenAfter: null, expectedSan: target.moveSan, isMatch: false };
+  }
 }

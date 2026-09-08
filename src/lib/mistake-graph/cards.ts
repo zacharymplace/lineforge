@@ -1,3 +1,4 @@
+import { createCorrection, type CorrectionInput } from "./correction";
 import type {
   LineForgeGame,
   MistakeCard,
@@ -9,6 +10,7 @@ export function createMistakeCard(
   game: LineForgeGame,
   ply: number,
   annotation?: MoveAnnotation,
+  correctionInput?: CorrectionInput,
 ): MistakeCard | null {
   const move = game.moves[ply - 1];
 
@@ -16,14 +18,17 @@ export function createMistakeCard(
     return null;
   }
 
+  const correction = correctionInput ? createCorrection({ fenBefore: move.before, moveSan: move.san }, correctionInput) : undefined;
+
   return {
+    correction,
     id: `card-${Date.now()}-${crypto.randomUUID()}`,
     sourceGameId: game.id,
     ply,
     fenBefore: move.before,
     fenAfter: move.after,
     moveSan: move.san,
-    prompt: `Find the move played on ply ${ply}.`,
+    prompt: correction ? "Play your saved correction. What threat or plan does it address?" : `Game recall: find the move played on ply ${ply}.`,
     note: annotation?.thought ?? "",
     tags: annotation?.tags ?? [],
     verdict: annotation?.verdict ?? "unclear",

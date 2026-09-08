@@ -1,5 +1,6 @@
 "use client";
 
+import type { CorrectionInput } from "@/lib/mistake-graph/correction";
 import { useState } from "react";
 import {
   DEFAULT_COACH_LENS_ID,
@@ -29,7 +30,7 @@ type MoveAnnotationPanelProps = {
   comparisonLensIds: CoachLensId[];
   onComparisonLensIdsChange: (lensIds: CoachLensId[]) => void;
   onSaveAnnotation: (annotation: MoveAnnotation) => void;
-  onCreateCard: () => MistakeCard | null;
+  onCreateCard: (correction?: CorrectionInput) => MistakeCard | null;
 };
 
 export function MoveAnnotationPanel({
@@ -42,6 +43,8 @@ export function MoveAnnotationPanel({
 }: MoveAnnotationPanelProps) {
   const move = currentPly > 0 ? game.moves[currentPly - 1] : null;
   const annotation = game.annotations[currentPly] ?? emptyAnnotation(currentPly);
+  const [correction, setCorrection] = useState<CorrectionInput>({ move: "", reason: "", source: "" });
+  const [cardMessage, setCardMessage] = useState("");
   const [previewPacket, setPreviewPacket] = useState<ReviewPacket | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [selectedLensId, setSelectedLensId] = useState<CoachLensId>(DEFAULT_COACH_LENS_ID);
@@ -148,13 +151,30 @@ export function MoveAnnotationPanel({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button className="lf-button-primary" disabled={!move} onClick={onCreateCard}>
-          Create mistake card
+        <button className="lf-button-primary" disabled={!move} onClick={() => onCreateCard()}>
+          Create game-recall card
         </button>
         <button className="lf-button" disabled={!move} onClick={handlePreviewPacket}>
           Export move packet
         </button>
       </div>
+      <form className="grid gap-3 rounded-md border border-stone-700 p-3" onSubmit={event => {
+        event.preventDefault();
+        try {
+          if (onCreateCard(correction)) {
+            setCardMessage("Correction card saved. Open Review to practice it.");
+            setCorrection({ move: "", reason: "", source: "" });
+          }
+        } catch (error) { setCardMessage(error instanceof Error ? error.message : "Could not create correction card."); }
+      }}>
+        <h3 className="font-semibold">Create correction card</h3>
+        <p className="text-sm text-stone-400">Save an alternative to the played move and explain why you prefer it. Legality is checked; this is your study target, not a claim of the best move.</p>
+        <label>Alternative move<input className="lf-field w-full" required disabled={!move} value={correction.move} onChange={event => setCorrection({ ...correction, move: event.target.value })} placeholder="Qe7" /></label>
+        <label>Why this correction<textarea className="lf-field w-full" required disabled={!move} value={correction.reason} onChange={event => setCorrection({ ...correction, reason: event.target.value })} /></label>
+        <label>Source<input className="lf-field w-full" required disabled={!move} value={correction.source} onChange={event => setCorrection({ ...correction, source: event.target.value })} placeholder="Your analysis, coach, or analysis reference" /></label>
+        <button className="lf-button-primary" disabled={!move}>Save correction card</button>
+        <p role="status">{cardMessage}</p>
+      </form>
       {exportError ? (
         <div
           className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100"

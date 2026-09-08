@@ -328,13 +328,13 @@ export function getReviewSessionResultDetails(
 
     return {
       cardId: result.cardId,
-      label: card ? `Ply ${card.ply}: ${card.moveSan}` : result.cardId,
+      label: card ? `${card.correction ? "Correction" : "Game recall"} · Ply ${card.ply}: ${card.moveSan}` : result.cardId,
       result: result.result,
       recordedAt: result.recordedAt,
       tags: card?.tags ?? [],
       verdict: card?.verdict,
       attemptedMoveSan: result.attemptedMoveSan,
-      expectedMoveSan: result.expectedMoveSan ?? card?.moveSan,
+      expectedMoveSan: result.expectedMoveSan ?? card?.correction?.moveSan ?? card?.moveSan,
     };
   });
 }

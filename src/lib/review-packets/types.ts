@@ -23,6 +23,7 @@ export type ReviewPacket = {
   id: string;
   lineforgeReviewPacketVersion: typeof LINEFORGE_REVIEW_PACKET_VERSION;
   sourceType: ReviewPacketSourceType;
+  correction?: MistakeCard["correction"];
   sourceGameId?: string;
   sourceGameName?: string;
   ply?: number;

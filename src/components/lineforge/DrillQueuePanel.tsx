@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CorrectionAnswer } from "./CorrectionAnswer";
+import { ReviewMoveInput } from "./ReviewMoveInput";
 import { Chessboard } from "react-chessboard";
 import {
   DEFAULT_COACH_LENS_ID,
@@ -360,11 +362,11 @@ export function DrillQueuePanel({
                 className={`grid w-full gap-1 border-b border-stone-800 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-stone-900 ${
                   selectedCard?.id === card.id ? "bg-stone-900 text-amber-100" : "text-stone-300"
                 }`}
-                aria-label={`Select drill card at ply ${card.ply}, ${card.verdict}, ${card.correct} of ${card.attempts} remembered`}
+                aria-label={`Select ${card.correction ? "correction" : "game-recall"} card at ply ${card.ply}, ${card.verdict}, ${card.correct} of ${card.attempts} remembered`}
                 onClick={() => onSelectCard(card.id)}
               >
                 <span>
-                  Ply {card.ply}: {card.verdict}
+                  {card.correction ? "Correction" : "Game recall"} · Ply {card.ply}: {card.verdict}
                 </span>
                 <span className="text-xs text-stone-500">
                   {card.correct}/{card.attempts} remembered
@@ -412,6 +414,7 @@ export function DrillQueuePanel({
                 {exportError}
               </div>
             ) : null}
+            {revealed || attemptResult ? <>
             <CoachLensPanel
               input={coachLensInput}
               selectedLensId={selectedLensId}
@@ -432,6 +435,7 @@ export function DrillQueuePanel({
                 />
               ) : null}
             </div>
+            </> : null}
             <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
               <Chessboard
                 options={{
@@ -459,18 +463,20 @@ export function DrillQueuePanel({
             >
               {attemptResult
                 ? attemptResult.isMatch
-                  ? "Correct. Review stats updated."
+                  ? selectedCard.correction ? "Matches your saved target. Review stats updated." : "Correct. Review stats updated."
                   : `Missed. Expected ${attemptResult.expectedSan}${
                       attemptResult.attemptedSan ? `, got ${attemptResult.attemptedSan}` : ""
                     }.`
-                : selectedCard.prompt}
+                : selectedCard.correction ? "Play your saved correction. What threat or plan does it address?" : `Game recall: find the move played on ply ${selectedCard.ply}.`}
             </div>
+            {!revealed && !attemptResult ? <ReviewMoveInput key={selectedCard.id} onAttempt={san => onAttemptMove(selectedCard, san, "")} /> : null}
             {!revealed && !attemptResult ? (
               <button className="lf-button-primary" onClick={onReveal}>
                 Reveal move
               </button>
             ) : (
               <div className="grid gap-3">
+                <CorrectionAnswer card={selectedCard} />
                 <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
                   <div>
                     <span className="text-stone-500">Original move: </span>
@@ -535,7 +541,7 @@ export function DrillQueuePanel({
                 ) : null}
               </div>
             )}
-            <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
+            <div hidden={!revealed && !attemptResult} className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
               <div className="text-stone-500">Recent attempts</div>
               {selectedAttempts.length === 0 ? (
                 <div className="text-stone-500">No attempts yet.</div>

@@ -1,3 +1,4 @@
+import { isValidCorrection } from "../mistake-graph/correction";
 import { Chess, validateFen } from "chess.js";
 import { MISTAKE_TAGS, MOVE_VERDICTS } from "./types";
 import type {
@@ -156,6 +157,7 @@ function isCard(value: unknown): value is MistakeCard {
     isValidFen(value.fenBefore) &&
     isValidFen(value.fenAfter) &&
     isString(value.moveSan) &&
+    (value.correction === undefined || isValidCorrection(value.correction, { fenBefore: value.fenBefore as string, moveSan: value.moveSan as string })) &&
     isString(value.prompt) &&
     isString(value.note) &&
     Array.isArray(value.tags) &&

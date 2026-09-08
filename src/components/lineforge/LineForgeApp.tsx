@@ -20,6 +20,7 @@ import {
   appendDrillAttempt,
   createDrillAttempt,
   evaluateDrillMove,
+  evaluateDrillSan,
 } from "@/lib/drill-queue/review";
 import {
   clearReviewSessionSummaries,
@@ -40,6 +41,7 @@ import {
   attachAnalysisToCard,
 } from "@/lib/engine/local-engine";
 import type { EngineAnalysisResult } from "@/lib/engine/types";
+import type { CorrectionInput } from "@/lib/mistake-graph/correction";
 import { createMistakeCard } from "@/lib/mistake-graph/cards";
 import { buildOpeningWeaknessMap } from "@/lib/mistake-graph/opening-weakness-map";
 import { buildOpeningWeaknessTrend } from "@/lib/mistake-graph/opening-weakness-trends";
@@ -122,6 +124,7 @@ export function LineForgeApp() {
   const [currentPly, setCurrentPly] = useState(0);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
+  const [reviewSessionActive, setReviewSessionActive] = useState(false);
   const [attemptResult, setAttemptResult] = useState<DrillAttemptResult | null>(null);
   const [sessionSummaries, setSessionSummaries] = useState<ReviewSessionSummary[]>([]);
   const [comparisonLensIds, setComparisonLensIds] = useState<CoachLensId[]>(
@@ -362,8 +365,8 @@ export function LineForgeApp() {
     }
   }
 
-  function handleCreateCard() {
-    const card = createMistakeCard(game, currentPly, game.annotations[currentPly]);
+  function handleCreateCard(correction?: CorrectionInput) {
+    const card = createMistakeCard(game, currentPly, game.annotations[currentPly], correction);
 
     if (!card) {
       return null;
@@ -399,7 +402,7 @@ export function LineForgeApp() {
     setAttemptResult(null);
   }
 
-  function handleSessionCardReview(cardId: string, result: ReviewResult) {
+  function handleSessionCardReview(cardId: string, result: ReviewResult, played?: DrillAttemptResult) {
     setCards((currentCards) =>
       currentCards.map((card) => {
         if (card.id !== cardId) {
@@ -408,7 +411,7 @@ export function LineForgeApp() {
 
         return appendDrillAttempt(
           card,
-          createDrillAttempt(card, result, "manual-reveal"),
+          createDrillAttempt(card, result, played ? "played" : "manual-reveal", played?.attemptedSan, played?.attemptedFenAfter),
         );
       }),
     );
@@ -426,9 +429,9 @@ export function LineForgeApp() {
   function handleAttemptMove(
     card: MistakeCard,
     sourceSquare: string,
-    targetSquare: string,
+    targetSquare: string = "",
   ) {
-    const result = evaluateDrillMove(card, sourceSquare, targetSquare);
+    const result = targetSquare ? evaluateDrillMove(card, sourceSquare, targetSquare) : evaluateDrillSan(card, sourceSquare);
     setCards((currentCards) =>
       currentCards.map((currentCard) => {
         if (currentCard.id !== card.id) {
@@ -579,8 +582,8 @@ export function LineForgeApp() {
           </nav>
         </header>
 
-        <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(340px,520px)_minmax(0,1fr)] xl:items-start">
-          <div className="xl:sticky xl:top-4">
+        <div className={`grid gap-4 sm:gap-6 xl:items-start ${activeWorkflow === "review" ? "" : "xl:grid-cols-[minmax(340px,520px)_minmax(0,1fr)]"}`}>
+          <div hidden={activeWorkflow === "review"} className="xl:sticky xl:top-4">
             <ChessBoardPanel
               fen={replayChess.fen()}
               game={game}
@@ -631,6 +634,7 @@ export function LineForgeApp() {
             >
               <WorkflowHeading sectionId="study" />
               <MoveAnnotationPanel
+                key={`${game.id}-${currentPly}`}
                 game={game}
                 currentPly={currentPly}
                 comparisonLensIds={comparisonLensIds}
@@ -662,7 +666,7 @@ export function LineForgeApp() {
             >
               <WorkflowHeading sectionId={activeWorkflow === "weaknesses" ? "weaknesses" : "review"} />
               {activeWorkflow === "review" ? (
-                <DrillQueuePanel
+                <div hidden={reviewSessionActive}><DrillQueuePanel
                   cards={cards}
                   activeGameId={game.id}
                   activeGameName={game.name}
@@ -680,6 +684,7 @@ export function LineForgeApp() {
                     selectedCard && revealedCardId === selectedCard.id ? attemptResult : null
                   }
                 />
+                </div>
               ) : (
                 <MistakeDashboard
                   stats={stats}
@@ -690,6 +695,10 @@ export function LineForgeApp() {
                 />
               )}
               <ReviewSessionPanel
+                onSessionActiveChange={active => {
+                  setReviewSessionActive(active);
+                  if (active) { setRevealedCardId(null); setAttemptResult(null); }
+                }}
                 cards={cards}
                 comparisonLensIds={comparisonLensIds}
                 sessionSummaries={sessionSummaries}

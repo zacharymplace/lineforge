@@ -33,9 +33,9 @@ Use this local walkthrough to create portfolio screenshots from the built-in dem
 20. Start a short review session from the available cards.
 21. Switch to Weaknesses.
 22. Inspect the opening weakness map and opening trend surfaces.
-23. Switch to Data.
-24. Open review packet export for the move or card and inspect the preview modal.
-25. Optionally inspect the local JSON backup/export controls.
+23. Return to Study to export a move packet, or Review to export a card packet; inspect the preview modal.
+24. Return to Play and save annotation changes before reopening the app.
+25. Switch to Data and optionally inspect the local JSON backup/export controls.
 
 ## Screenshot Checklist
 
@@ -66,3 +66,11 @@ Capture these moments in order for a coherent portfolio story:
 - Prefer showing deterministic summaries and coach lenses after adding note/verdict/tag data; otherwise the summary will correctly be sparse.
 - Engine analysis is optional. If the local engine is unavailable in the capture environment, use the deterministic note/tag/card flow instead.
 - Do not add named opening labels manually unless they already exist in the saved data. LineForge does not infer named openings.
+
+## Recorded walkthrough
+
+See [the September 7 review](demo-review-2026-09-07.md) for observed results, the replay repair, screenshot evidence in `screenshots/`, and untested boundaries. Review attempts in that cycle are synthetic. Current cards test recall of the played move, including mistakes; they do not yet validate a corrected decision.
+
+## Correction-card follow-up
+
+The correction-card flow is now implemented locally. See [correction cards](correction-cards.md) for creation, hidden-answer review, provenance, compatibility, and verification limits. Existing cards remain game-recall cards; the earlier walkthrough describes the pre-correction behavior.

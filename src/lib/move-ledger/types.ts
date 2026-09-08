@@ -60,7 +60,16 @@ export type MoveLedgerLibrary = {
   activeGameId: string | null;
 };
 
+export type CorrectionTarget = {
+  moveSan: string;
+  fenAfter: string;
+  reason: string;
+  source: string;
+  savedAt: string;
+};
+
 export type MistakeCard = {
+  correction?: CorrectionTarget;
   id: string;
   sourceGameId: string;
   ply: number;
