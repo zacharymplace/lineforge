@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CorrectionAnswer } from "./CorrectionAnswer";
 import { ReviewMoveInput } from "./ReviewMoveInput";
 import { Chessboard } from "react-chessboard";
+import { boardColors } from "@/lib/ui/board-style";
 import {
   DEFAULT_COACH_LENS_ID,
   buildCoachLensComparisonOutputs,
@@ -443,8 +444,7 @@ export function DrillQueuePanel({
                   position: selectedCard.fenBefore,
                   allowDragging: !revealed && !attemptResult,
                   boardStyle: { borderRadius: "6px" },
-                  darkSquareStyle: { backgroundColor: "#6f5b43" },
-                  lightSquareStyle: { backgroundColor: "#d7c7a4" },
+                  ...boardColors,
                   onPieceDrop: ({ sourceSquare, targetSquare }) => {
                     if (!targetSquare || revealed || attemptResult) {
                       return false;
@@ -559,7 +559,7 @@ export function DrillQueuePanel({
                           className={
                             attempt.result === "remembered"
                               ? "text-data"
-                              : "text-spot font-bold"
+                              : "text-ink font-bold underline decoration-spot decoration-2 underline-offset-2"
                           }
                         >
                           {attempt.result}

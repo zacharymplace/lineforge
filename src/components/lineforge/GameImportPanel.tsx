@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
+import { boardColors } from "@/lib/ui/board-style";
 import {
   clampPreviewPly,
   getPreviewMoveLabel,
@@ -118,7 +119,7 @@ export function GameImportPanel({
           Try demo game
         </button>
         {isError && message ? (
-          <span className="text-sm text-spot font-bold" role="alert">
+          <span className="border-l-4 border-spot pl-2 text-sm text-ink font-bold" role="alert">
             {message}
           </span>
         ) : (
@@ -267,8 +268,7 @@ function PreviewBoardScrubber({
               position: position.fen,
               allowDragging: false,
               boardStyle: { borderRadius: "4px" },
-              darkSquareStyle: { backgroundColor: "#6f5b43" },
-              lightSquareStyle: { backgroundColor: "#d7c7a4" },
+              ...boardColors,
             }}
           />
         </div>

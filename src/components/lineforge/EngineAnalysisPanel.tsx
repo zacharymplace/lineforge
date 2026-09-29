@@ -233,7 +233,7 @@ export function EngineAnalysisPanel({
       </div>
 
       {error ? (
-        <div className="text-sm text-spot font-bold" role="alert">
+        <div className="border-l-4 border-spot pl-2 text-sm text-ink font-bold" role="alert">
           {error}
         </div>
       ) : null}

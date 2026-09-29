@@ -11,7 +11,7 @@ const severityClass = {
   info: "text-ink-2",
   positive: "text-data",
   warning: "text-ink",
-  critical: "text-spot font-bold",
+  critical: "text-ink font-bold underline decoration-spot decoration-2 underline-offset-2",
 };
 
 export function ReviewSummary({ summary, heading = "Review summary" }: ReviewSummaryProps) {

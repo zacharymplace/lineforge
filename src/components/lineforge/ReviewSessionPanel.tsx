@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CorrectionAnswer } from "./CorrectionAnswer";
 import { ReviewMoveInput } from "./ReviewMoveInput";
 import { Chessboard } from "react-chessboard";
+import { boardColors } from "@/lib/ui/board-style";
 import { CoachLensComparison } from "./CoachLensComparison";
 import { OpeningWeaknessMapPanel } from "./OpeningWeaknessMapPanel";
 import { OpeningWeaknessTrendPanel } from "./OpeningWeaknessTrendPanel";
@@ -330,8 +331,7 @@ export function ReviewSessionPanel({
                   position: currentCard.fenBefore,
                   allowDragging: !revealed,
                   boardStyle: { borderRadius: "6px", aspectRatio: "1 / 1", height: "auto" },
-                  darkSquareStyle: { backgroundColor: "#6f5b43" },
-                  lightSquareStyle: { backgroundColor: "#d7c7a4" },
+                  ...boardColors,
                   onPieceDrop: ({ sourceSquare, targetSquare }) => {
                     if (!targetSquare || revealed) {
                       return false;

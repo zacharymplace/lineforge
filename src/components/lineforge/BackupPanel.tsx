@@ -59,7 +59,7 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
         />
       </div>
       {isError && message ? (
-        <div className="text-sm text-spot font-bold" role="alert">
+        <div className="border-l-4 border-spot pl-2 text-sm text-ink font-bold" role="alert">
           {message}
         </div>
       ) : (
