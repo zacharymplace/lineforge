@@ -35,6 +35,10 @@ export function ChessBoardPanel({
             boardStyle: { borderRadius: "6px" },
             darkSquareStyle: { backgroundColor: "#6f5b43" },
             lightSquareStyle: { backgroundColor: "#d7c7a4" },
+            // The two square colours are fixed, so the coordinate labels sit on a fixed paper chip: no single text colour
+            // clears contrast on both squares (light-grey labels were 1.9:1 on the light squares).
+            alphaNotationStyle: { color: "#12110f", backgroundColor: "#f1efe8", fontSize: "10px", fontWeight: 700, lineHeight: 1.2, padding: "0 2px" },
+            numericNotationStyle: { color: "#12110f", backgroundColor: "#f1efe8", fontSize: "10px", fontWeight: 700, lineHeight: 1.2, padding: "0 2px" },
             onPieceDrop: ({ sourceSquare, targetSquare }) =>
               targetSquare ? onDrop(sourceSquare, targetSquare) : false,
           }}

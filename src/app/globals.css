@@ -63,7 +63,7 @@ button:disabled {
 
 .lf-button-primary {
   background: var(--spot);
-  color: var(--paper);
+  color: var(--on-spot);
 }
 
 .lf-button-primary:hover {
@@ -80,7 +80,7 @@ button:disabled {
 
 .lf-button-danger:hover {
   background: var(--spot);
-  color: var(--paper);
+  color: var(--on-spot);
 }
 
 .lf-field {

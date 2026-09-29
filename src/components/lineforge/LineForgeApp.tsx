@@ -510,7 +510,7 @@ export function LineForgeApp() {
   }
 
   return (
-    <main className="min-h-screen bg-[#11110f] text-ink">
+    <main className="min-h-screen bg-paper text-ink">
       <div className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
         <header className="grid gap-2 border-b border-ink pb-4 sm:pb-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
