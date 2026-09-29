@@ -9,6 +9,7 @@
   --spot:#D63418; --spot-tint:#F6DDD6;
   --data:#1C63B8; --data-tint:#D8E4F4;
   --grid:#DCD7C9; --dim:0.34; --dot:rgba(18,17,15,0.055);
+  --on-spot:#FFFFFF; /* text on --spot fills: white is 4.81:1 in light, paper is only 4.18:1 */
 
   --font-display:"Archivo Black",Impact,"Haettenschweiler","Arial Black",sans-serif;
   --font-condensed:"Barlow Condensed","Oswald","Arial Narrow",sans-serif;
@@ -23,6 +24,7 @@
     --rule:#33322D; --rule-strong:#EFEBE1;
     --spot:#FF5A36; --spot-tint:#2A1108; --data:#4D9BFF; --data-tint:#0C1B2E;
     --grid:#171715; --dim:0.48; --dot:rgba(239,235,225,0.05);
+    --on-spot:#0C0C0B;
   }
 }
 :root[data-theme="dark"]{
@@ -31,6 +33,7 @@
   --rule:#33322D; --rule-strong:#EFEBE1;
   --spot:#FF5A36; --spot-tint:#2A1108; --data:#4D9BFF; --data-tint:#0C1B2E;
   --grid:#171715; --dim:0.48; --dot:rgba(239,235,225,0.05);
+  --on-spot:#0C0C0B;
 }
 
 body{
@@ -44,6 +47,6 @@ h2,h3{font-family:var(--font-condensed);font-weight:700;letter-spacing:.06em;lin
 code,kbd,pre,table,.mono{font-family:var(--font-mono)}
 button,.btn{font-family:var(--font-condensed);text-transform:uppercase;letter-spacing:.1em;
   border:var(--border);border-radius:0;box-shadow:none;background:var(--paper);color:var(--ink)}
-button.primary,.btn-primary{background:var(--spot);color:var(--paper);border-color:var(--rule-strong)}
+button.primary,.btn-primary{background:var(--spot);color:var(--on-spot);border-color:var(--rule-strong)}
 hr.perf{border:0;border-top:2px dotted var(--spot);margin:1.5rem 0}
 .catalogue{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted)}
