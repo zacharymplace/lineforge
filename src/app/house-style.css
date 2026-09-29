@@ -1,6 +1,14 @@
 /* House style tokens. Canonical source: ~/dev/house-style/tokens.css.
    Vendored into repos by sync.sh; edit here, not in the copies. */
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600&family=Barlow+Condensed:wght@500;700&family=Space+Mono:wght@400;700&display=swap");
+/* Self-hosted (SIL OFL, from @fontsource 5.3.0): the woff2 files live in house-fonts/ next to this file; paths are relative to the stylesheet
+   so they work under bundlers, subpaths and file://. No request leaves the page. */
+@font-face{font-family:"Archivo Black";font-style:normal;font-weight:400;font-display:swap;src:url("house-fonts/archivo-black-400.woff2") format("woff2")}
+@font-face{font-family:"Archivo";font-style:normal;font-weight:400;font-display:swap;src:url("house-fonts/archivo-400.woff2") format("woff2")}
+@font-face{font-family:"Archivo";font-style:normal;font-weight:600;font-display:swap;src:url("house-fonts/archivo-600.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:500;font-display:swap;src:url("house-fonts/barlow-condensed-500.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-style:normal;font-weight:700;font-display:swap;src:url("house-fonts/barlow-condensed-700.woff2") format("woff2")}
+@font-face{font-family:"Space Mono";font-style:normal;font-weight:400;font-display:swap;src:url("house-fonts/space-mono-400.woff2") format("woff2")}
+@font-face{font-family:"Space Mono";font-style:normal;font-weight:700;font-display:swap;src:url("house-fonts/space-mono-700.woff2") format("woff2")}
 
 :root{
   --paper:#F1EFE8; --paper-2:#E4E0D5; --paper-3:#D6D1C2;
