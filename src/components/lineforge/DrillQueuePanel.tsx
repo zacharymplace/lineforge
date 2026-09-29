@@ -256,17 +256,17 @@ export function DrillQueuePanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">DrillQueue</h2>
-        <p className="text-sm text-stone-500">Review saved positions from your own games.</p>
+        <h2 className="text-lg font-semibold text-ink">DrillQueue</h2>
+        <p className="text-sm text-ink-muted">Review saved positions from your own games.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(180px,240px)_1fr]">
         <div className="grid content-start gap-2">
           <div className="grid gap-2">
             <label className="grid gap-1 text-sm">
-              <span className="text-stone-500">Schedule filter</span>
+              <span className="text-ink-muted">Schedule filter</span>
               <select
                 className="lf-field"
                 value={scheduleFilter}
@@ -280,7 +280,7 @@ export function DrillQueuePanel({
               </select>
             </label>
             <label className="grid gap-1 text-sm">
-              <span className="text-stone-500">Source game</span>
+              <span className="text-ink-muted">Source game</span>
               <select
                 className="lf-field"
                 value={sourceGameFilter}
@@ -298,7 +298,7 @@ export function DrillQueuePanel({
               </select>
             </label>
             <label className="grid gap-1 text-sm">
-              <span className="text-stone-500">Last reviewed</span>
+              <span className="text-ink-muted">Last reviewed</span>
               <select
                 className="lf-field"
                 value={lastReviewedFilter}
@@ -314,7 +314,7 @@ export function DrillQueuePanel({
               </select>
             </label>
           </div>
-          <div className="grid gap-2 text-xs text-stone-500">
+          <div className="grid gap-2 text-xs text-ink-muted">
             <div role="status" aria-live="polite" aria-label={visibleCardCountLabel}>
               Filters: {activeFilterLabels.join(" · ")} · {visibleCards.length} of {cards.length} cards
             </div>
@@ -323,11 +323,11 @@ export function DrillQueuePanel({
                 {activeFilterChips.map((chip) => (
                   <span
                     key={chip.id}
-                    className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-900 px-2 py-1 text-[11px] text-stone-300"
+                    className="inline-flex items-center gap-1 border-[1.5px] border-ink bg-paper-3 px-2 py-1 text-[11px] text-ink-2"
                   >
                     {chip.label}
                     <button
-                      className="text-stone-500 hover:text-stone-100"
+                      className="text-ink-muted hover:text-ink"
                       type="button"
                       aria-label={chip.clearLabel}
                       onClick={() => handleClearFilterChip(chip.id)}
@@ -348,19 +348,19 @@ export function DrillQueuePanel({
             </button>
           </div>
           <StatusHint message={savedMessage.message} />
-          <div className="max-h-80 overflow-auto rounded-md border border-stone-800">
+          <div className="max-h-80 overflow-auto border-[1.5px] border-ink">
           {cards.length === 0 ? (
-            <div className="p-3 text-sm text-stone-500">Create a mistake card to begin.</div>
+            <div className="p-3 text-sm text-ink-muted">Create a mistake card to begin.</div>
           ) : visibleCards.length === 0 ? (
-            <div className="p-3 text-sm text-stone-500">
+            <div className="p-3 text-sm text-ink-muted">
               No cards match these filters: {activeFilterLabels.join(", ")}.
             </div>
           ) : (
             visibleCards.map((card) => (
               <button
                 key={card.id}
-                className={`grid w-full gap-1 border-b border-stone-800 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-stone-900 ${
-                  selectedCard?.id === card.id ? "bg-stone-900 text-amber-100" : "text-stone-300"
+                className={`grid w-full gap-1 border-b border-ink px-3 py-2 text-left text-sm last:border-b-0 hover:bg-paper-3 ${
+                  selectedCard?.id === card.id ? "bg-paper-3 text-ink" : "text-ink-2"
                 }`}
                 aria-label={`Select ${card.correction ? "correction" : "game-recall"} card at ply ${card.ply}, ${card.verdict}, ${card.correct} of ${card.attempts} remembered`}
                 onClick={() => onSelectCard(card.id)}
@@ -368,7 +368,7 @@ export function DrillQueuePanel({
                 <span>
                   {card.correction ? "Correction" : "Game recall"} · Ply {card.ply}: {card.verdict}
                 </span>
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-ink-muted">
                   {card.correct}/{card.attempts} remembered
                 </span>
                 <ScheduleBadge item={scheduleItemsByCardId.get(card.id)} compact />
@@ -380,24 +380,24 @@ export function DrillQueuePanel({
 
         {selectedCard ? (
           <div className="grid gap-3">
-            <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm sm:grid-cols-3">
+            <div className="grid gap-2 bg-paper-2 p-3 text-sm sm:grid-cols-3">
               <div>
-                <div className="text-xs text-stone-500">Success rate</div>
-                <div className="font-semibold text-amber-100">
+                <div className="text-xs text-ink-muted">Success rate</div>
+                <div className="font-semibold text-ink">
                   {getSuccessRate(selectedCard)}%
                 </div>
               </div>
               <div>
-                <div className="text-xs text-stone-500">Last reviewed</div>
-                <div className="text-stone-200">
+                <div className="text-xs text-ink-muted">Last reviewed</div>
+                <div className="text-ink-2">
                   {selectedCard.lastReviewedAt
                     ? new Date(selectedCard.lastReviewedAt).toLocaleString()
                     : "Never"}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-stone-500">Last result</div>
-                <div className="text-stone-200">{lastAttempt?.result ?? "None"}</div>
+                <div className="text-xs text-ink-muted">Last result</div>
+                <div className="text-ink-2">{lastAttempt?.result ?? "None"}</div>
               </div>
             </div>
             <ScheduleBadge item={selectedScheduleItem} />
@@ -408,7 +408,7 @@ export function DrillQueuePanel({
             </div>
             {exportError ? (
               <div
-                className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100"
+                className="border-[1.5px] border-spot border-l-[6px] bg-spot-tint p-3 text-sm text-ink"
                 role="alert"
               >
                 {exportError}
@@ -436,7 +436,7 @@ export function DrillQueuePanel({
               ) : null}
             </div>
             </> : null}
-            <div className="max-w-sm overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2">
+            <div className="max-w-sm overflow-hidden border-[1.5px] border-ink bg-paper p-2">
               <Chessboard
                 options={{
                   id: `drill-${selectedCard.id}`,
@@ -457,7 +457,7 @@ export function DrillQueuePanel({
               />
             </div>
             <div
-              className="rounded-md bg-black/30 p-3 text-sm text-stone-300"
+              className="bg-paper-2 p-3 text-sm text-ink-2"
               role="status"
               aria-live="polite"
             >
@@ -477,30 +477,30 @@ export function DrillQueuePanel({
             ) : (
               <div className="grid gap-3">
                 <CorrectionAnswer card={selectedCard} />
-                <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
+                <div className="grid gap-2 bg-paper-2 p-3 text-sm">
                   <div>
-                    <span className="text-stone-500">Original move: </span>
-                    <span className="font-mono text-amber-100">{selectedCard.moveSan}</span>
+                    <span className="text-ink-muted">Original move: </span>
+                    <span className="font-mono text-ink">{selectedCard.moveSan}</span>
                   </div>
                   <div>
-                    <span className="text-stone-500">Verdict: </span>
+                    <span className="text-ink-muted">Verdict: </span>
                     <span>{selectedCard.verdict}</span>
                   </div>
                   <div>
-                    <span className="text-stone-500">Tags: </span>
+                    <span className="text-ink-muted">Tags: </span>
                     <span>{selectedCard.tags.join(", ") || "none"}</span>
                   </div>
-                  <div className="text-stone-300">{selectedCard.note || "No note saved."}</div>
+                  <div className="text-ink-2">{selectedCard.note || "No note saved."}</div>
                   {selectedCard.engineAnalysis ? (
                     <div className="grid gap-3">
                       <div>
-                        <div className="text-stone-500">{getStoredAnalysisLabel("card")}</div>
-                        <div className="font-mono text-amber-100">
+                        <div className="text-ink-muted">{getStoredAnalysisLabel("card")}</div>
+                        <div className="font-mono text-ink">
                           {selectedCard.engineAnalysis.bestMoveSan ??
                             selectedCard.engineAnalysis.bestMoveUci}{" "}
                           · {formatEvaluation(selectedCard.engineAnalysis.evaluation)}
                         </div>
-                        <div className="text-xs text-stone-500">
+                        <div className="text-xs text-ink-muted">
                           Analyzed {formatAnalysisTimestamp(selectedCard.engineAnalysis.analyzedAt)}
                         </div>
                       </div>
@@ -541,10 +541,10 @@ export function DrillQueuePanel({
                 ) : null}
               </div>
             )}
-            <div hidden={!revealed && !attemptResult} className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
-              <div className="text-stone-500">Recent attempts</div>
+            <div hidden={!revealed && !attemptResult} className="grid gap-2 bg-paper-2 p-3 text-sm">
+              <div className="text-ink-muted">Recent attempts</div>
               {selectedAttempts.length === 0 ? (
-                <div className="text-stone-500">No attempts yet.</div>
+                <div className="text-ink-muted">No attempts yet.</div>
               ) : (
                 [...selectedAttempts]
                   .slice(-5)
@@ -552,23 +552,23 @@ export function DrillQueuePanel({
                   .map((attempt) => (
                     <div
                       key={attempt.id}
-                      className="grid gap-1 border-t border-stone-800 pt-2 first:border-t-0 first:pt-0"
+                      className="grid gap-1 border-t border-ink pt-2 first:border-t-0 first:pt-0"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span
                           className={
                             attempt.result === "remembered"
-                              ? "text-emerald-200"
-                              : "text-red-200"
+                              ? "text-data"
+                              : "text-spot font-bold"
                           }
                         >
                           {attempt.result}
                         </span>
-                        <span className="text-xs text-stone-500">
+                        <span className="text-xs text-ink-muted">
                           {new Date(attempt.attemptedAt).toLocaleString()}
                         </span>
                       </div>
-                      <div className="text-xs text-stone-400">
+                      <div className="text-xs text-ink-muted">
                         {attempt.method} · expected {attempt.expectedMoveSan}
                         {attempt.attemptedMoveSan
                           ? ` · played ${attempt.attemptedMoveSan}`

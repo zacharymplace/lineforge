@@ -100,10 +100,10 @@ export function MoveAnnotationPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Move annotation</h2>
-        <p className="text-sm text-stone-500">
+        <h2 className="text-lg font-semibold text-ink">Move annotation</h2>
+        <p className="text-sm text-ink-muted">
           {move ? `Ply ${currentPly}: ${move.san}` : "Select or play a move to annotate it."}
         </p>
       </div>
@@ -117,7 +117,7 @@ export function MoveAnnotationPanel({
       />
 
       <div className="grid gap-2">
-        <div className="text-sm text-stone-500">Verdict</div>
+        <div className="text-sm text-ink-muted">Verdict</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {MOVE_VERDICTS.map((verdict) => (
             <button
@@ -133,7 +133,7 @@ export function MoveAnnotationPanel({
       </div>
 
       <div className="grid gap-2">
-        <div className="text-sm text-stone-500">Tags</div>
+        <div className="text-sm text-ink-muted">Tags</div>
         <div className="flex flex-wrap gap-2">
           {MISTAKE_TAGS.map((tag) => (
             <button
@@ -158,7 +158,7 @@ export function MoveAnnotationPanel({
           Export move packet
         </button>
       </div>
-      <form className="grid gap-3 rounded-md border border-stone-700 p-3" onSubmit={event => {
+      <form className="grid gap-3 border-[1.5px] border-ink p-3" onSubmit={event => {
         event.preventDefault();
         try {
           if (onCreateCard(correction)) {
@@ -168,7 +168,7 @@ export function MoveAnnotationPanel({
         } catch (error) { setCardMessage(error instanceof Error ? error.message : "Could not create correction card."); }
       }}>
         <h3 className="font-semibold">Create correction card</h3>
-        <p className="text-sm text-stone-400">Save an alternative to the played move and explain why you prefer it. Legality is checked; this is your study target, not a claim of the best move.</p>
+        <p className="text-sm text-ink-muted">Save an alternative to the played move and explain why you prefer it. Legality is checked; this is your study target, not a claim of the best move.</p>
         <label>Alternative move<input className="lf-field w-full" required disabled={!move} value={correction.move} onChange={event => setCorrection({ ...correction, move: event.target.value })} placeholder="Qe7" /></label>
         <label>Why this correction<textarea className="lf-field w-full" required disabled={!move} value={correction.reason} onChange={event => setCorrection({ ...correction, reason: event.target.value })} /></label>
         <label>Source<input className="lf-field w-full" required disabled={!move} value={correction.source} onChange={event => setCorrection({ ...correction, source: event.target.value })} placeholder="Your analysis, coach, or analysis reference" /></label>
@@ -177,7 +177,7 @@ export function MoveAnnotationPanel({
       </form>
       {exportError ? (
         <div
-          className="rounded-md border border-red-900 bg-red-950/60 p-3 text-sm text-red-100"
+          className="border-[1.5px] border-spot border-l-[6px] bg-spot-tint p-3 text-sm text-ink"
           role="alert"
         >
           {exportError}
@@ -212,13 +212,13 @@ export function MoveAnnotationPanel({
 
       {annotation.engineAnalysis ? (
         <div className="grid gap-3">
-          <div className="grid gap-1 rounded-md bg-black/30 p-3 text-sm">
-            <div className="text-stone-500">{getStoredAnalysisLabel("move")}</div>
-            <div className="font-mono text-amber-100">
+          <div className="grid gap-1 bg-paper-2 p-3 text-sm">
+            <div className="text-ink-muted">{getStoredAnalysisLabel("move")}</div>
+            <div className="font-mono text-ink">
               {annotation.engineAnalysis.bestMoveSan ?? annotation.engineAnalysis.bestMoveUci} ·{" "}
               {formatEvaluation(annotation.engineAnalysis.evaluation)}
             </div>
-            <div className="text-xs text-stone-500">
+            <div className="text-xs text-ink-muted">
               Analyzed {formatAnalysisTimestamp(annotation.engineAnalysis.analyzedAt)}
             </div>
           </div>

@@ -223,17 +223,17 @@ export function ReviewSessionPanel({
   return (
     <>
       {displayMode === "review" ? (
-        <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+        <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Review session</h2>
-        <p className="text-sm text-stone-500">Drill a filtered queue of mistake cards.</p>
+        <h2 className="text-lg font-semibold text-ink">Review session</h2>
+        <p className="text-sm text-ink-muted">Drill a filtered queue of mistake cards.</p>
       </div>
 
       {!session ? (
         <div className="grid gap-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="grid gap-1 text-sm">
-              <span className="text-stone-500">Filter</span>
+              <span className="text-ink-muted">Filter</span>
               <select
                 className="lf-field"
                 value={filterKind}
@@ -250,7 +250,7 @@ export function ReviewSessionPanel({
 
             {filterKind === "verdict" ? (
               <label className="grid gap-1 text-sm">
-                <span className="text-stone-500">Verdict</span>
+                <span className="text-ink-muted">Verdict</span>
                 <select
                   className="lf-field"
                   value={filterVerdict}
@@ -267,7 +267,7 @@ export function ReviewSessionPanel({
 
             {filterKind === "tag" ? (
               <label className="grid gap-1 text-sm">
-                <span className="text-stone-500">Tag</span>
+                <span className="text-ink-muted">Tag</span>
                 <select
                   className="lf-field"
                   value={filterTag}
@@ -283,7 +283,7 @@ export function ReviewSessionPanel({
             ) : null}
 
             <label className="grid gap-1 text-sm">
-              <span className="text-stone-500">Session size</span>
+              <span className="text-ink-muted">Session size</span>
               <select
                 className="lf-field"
                 value={String(sessionSize)}
@@ -308,7 +308,7 @@ export function ReviewSessionPanel({
               Start session
             </button>
             {cards.length === 0 ? (
-              <span className="text-sm text-stone-500">Create mistake cards to start a session.</span>
+              <span className="text-sm text-ink-muted">Create mistake cards to start a session.</span>
             ) : null}
           </div>
         </div>
@@ -317,11 +317,11 @@ export function ReviewSessionPanel({
       {session && currentCard ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
           <div className="grid gap-3">
-            <div className="text-sm text-stone-500" role="status" aria-live="polite">
+            <div className="text-sm text-ink-muted" role="status" aria-live="polite">
               Card {session.currentCardIndex + 1} of {session.selectedCardIds.length}
             </div>
             <div
-              className="overflow-hidden rounded-lg border border-stone-800 bg-stone-950 p-2"
+              className="overflow-hidden border-[1.5px] border-ink bg-paper p-2"
               aria-label={`Review board for ${currentCardActionLabel}`}
             >
               <Chessboard
@@ -345,10 +345,10 @@ export function ReviewSessionPanel({
           </div>
 
           <div className="grid gap-3">
-            <div className="rounded-md bg-black/30 p-3 text-sm">
-              <div className="text-amber-100">{currentCard.correction ? "Correction card" : "Game recall"}</div>
-              <div className="text-stone-300">{currentCard.correction ? "Play your saved correction." : `Find the move played on ply ${currentCard.ply}.`}</div>
-              <div className="text-xs text-stone-500">
+            <div className="bg-paper-2 p-3 text-sm">
+              <div className="text-ink">{currentCard.correction ? "Correction card" : "Game recall"}</div>
+              <div className="text-ink-2">{currentCard.correction ? "Play your saved correction." : `Find the move played on ply ${currentCard.ply}.`}</div>
+              <div className="text-xs text-ink-muted">
                 {currentCard.verdict} · {currentCard.tags.join(", ") || "no tags"}
               </div>
               <div className="mt-2">
@@ -476,8 +476,8 @@ function SessionSummary({
   onReviewMissedAgain?: () => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-md border border-stone-800 bg-black/30 p-3 text-sm">
-      <div className="font-medium text-stone-100">Session summary</div>
+    <div className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3 text-sm">
+      <div className="font-medium text-ink">Session summary</div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         <Metric label="Size" value={summary.sessionCardCount} />
         <Metric label="Reviewed" value={summary.totalReviewed} />
@@ -489,22 +489,22 @@ function SessionSummary({
       </div>
       <div className="grid gap-2 lg:grid-cols-2">
         <div>
-          <div className="text-stone-500">Top missed tags</div>
-          <div className="text-stone-300">
+          <div className="text-ink-muted">Top missed tags</div>
+          <div className="text-ink-2">
             {summary.topMissedTags.length
               ? summary.topMissedTags.map((item) => `${item.tag} (${item.count})`).join(", ")
               : "No missed tags."}
           </div>
         </div>
         <div>
-          <div className="text-stone-500">Verdicts</div>
-          <div className="text-stone-300">
+          <div className="text-ink-muted">Verdicts</div>
+          <div className="text-ink-2">
             {summary.verdictBreakdown.map((item) => `${item.verdict} (${item.count})`).join(", ") || "None"}
           </div>
         </div>
       </div>
-      <div className="rounded-md border border-stone-800 bg-stone-950 p-2 text-stone-200">
-        <span className="text-stone-500">Next action: </span>
+      <div className="border-[1.5px] border-ink bg-paper p-2 text-ink-2">
+        <span className="text-ink-muted">Next action: </span>
         {summary.recommendedNextAction}
       </div>
       {onReviewMissedAgain ? (
@@ -518,9 +518,9 @@ function SessionSummary({
 
 function Metric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-md bg-stone-950 p-2">
-      <div className="text-xs text-stone-500">{label}</div>
-      <div className="font-semibold text-amber-100">{value}</div>
+    <div className="bg-paper p-2">
+      <div className="text-xs text-ink-muted">{label}</div>
+      <div className="font-semibold text-ink">{value}</div>
     </div>
   );
 }

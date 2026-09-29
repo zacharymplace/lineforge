@@ -15,9 +15,9 @@ type CoachLensComparisonProps = {
 };
 
 const confidenceClass = {
-  low: "border-stone-700 bg-stone-900 text-stone-300",
-  medium: "border-amber-800 bg-amber-950/60 text-amber-100",
-  high: "border-emerald-900 bg-emerald-950/60 text-emerald-200",
+  low: "border-ink bg-paper-3 text-ink-2",
+  medium: "border-dashed border-spot bg-spot-tint text-ink",
+  high: "border-data border-l-[6px] bg-data-tint text-data",
 };
 
 export function CoachLensComparison({
@@ -34,15 +34,15 @@ export function CoachLensComparison({
   }
 
   return (
-    <div className="grid gap-3 rounded-md bg-black/30 p-3 text-sm">
+    <div className="grid gap-3 bg-paper-2 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="font-medium text-stone-100">Compare lenses</div>
-          <div className="text-xs text-stone-500">
+          <div className="font-medium text-ink">Compare lenses</div>
+          <div className="text-xs text-ink-muted">
             Choose up to {MAX_COACH_LENS_COMPARISON} deterministic perspectives.
           </div>
         </div>
-        <div className="text-xs text-stone-500">
+        <div className="text-xs text-ink-muted">
           {selectedLensIds.length}/{MAX_COACH_LENS_COMPARISON} selected
         </div>
       </div>
@@ -72,24 +72,24 @@ export function CoachLensComparison({
         {outputs.map((output) => (
           <div
             key={output.lensId}
-            className="grid content-start gap-2 rounded-md border border-stone-800 bg-stone-950 p-3"
+            className="grid content-start gap-2 border-[1.5px] border-ink bg-paper p-3"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <div className="font-semibold text-amber-100">{output.title}</div>
+              <div className="font-semibold text-ink">{output.title}</div>
               <span
-                className={`rounded-md border px-2 py-0.5 text-xs ${confidenceClass[output.confidence]}`}
+                className={`border-[1.5px] px-2 py-0.5 text-xs ${confidenceClass[output.confidence]}`}
               >
                 {output.confidence}
               </span>
             </div>
-            <p className="text-stone-300">{output.summary}</p>
-            <div className="grid gap-1 text-stone-300">
+            <p className="text-ink-2">{output.summary}</p>
+            <div className="grid gap-1 text-ink-2">
               {output.points.slice(0, 3).map((point) => (
                 <div key={point.id}>{point.text}</div>
               ))}
             </div>
-            <div className="rounded-md border border-stone-800 bg-black/30 p-2 text-stone-200">
-              <span className="text-stone-500">Next: </span>
+            <div className="border-[1.5px] border-ink bg-paper-2 p-2 text-ink-2">
+              <span className="text-ink-muted">Next: </span>
               {output.recommendedNextAction}
             </div>
           </div>

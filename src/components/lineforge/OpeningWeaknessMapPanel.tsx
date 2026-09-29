@@ -119,10 +119,10 @@ export function OpeningWeaknessMapPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Opening weakness map</h2>
-        <p className="text-sm text-stone-500">
+        <h2 className="text-lg font-semibold text-ink">Opening weakness map</h2>
+        <p className="text-sm text-ink-muted">
           Local early-game patterns from mistake cards through ply {openingMap.openingPhaseMaxPly}.
         </p>
       </div>
@@ -140,10 +140,10 @@ export function OpeningWeaknessMapPanel({
         <Metric label="Next focus" value={filteredMap.summary.recommendedNextReviewFocus} />
       </div>
 
-      <div className="grid gap-3 rounded-md bg-black/30 p-3">
+      <div className="grid gap-3 bg-paper-2 p-3">
         <div className="grid gap-3 md:grid-cols-3">
           <label className="grid gap-1 text-sm">
-            <span className="text-stone-500">Review state</span>
+            <span className="text-ink-muted">Review state</span>
             <select
               className="lf-field"
               value={filterPreference.reviewState}
@@ -159,7 +159,7 @@ export function OpeningWeaknessMapPanel({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-stone-500">Verdict</span>
+            <span className="text-ink-muted">Verdict</span>
             <select
               className="lf-field"
               value={filterPreference.verdict}
@@ -176,7 +176,7 @@ export function OpeningWeaknessMapPanel({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-stone-500">Tag</span>
+            <span className="text-ink-muted">Tag</span>
             <select
               className="lf-field"
               value={filterPreference.tag}
@@ -195,7 +195,7 @@ export function OpeningWeaknessMapPanel({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <label className="flex items-center gap-2 text-stone-300">
+          <label className="flex items-center gap-2 text-ink-2">
             <input
               type="checkbox"
               checked={filterPreference.currentGameOnly}
@@ -221,7 +221,7 @@ export function OpeningWeaknessMapPanel({
           </div>
         </div>
 
-        <div className="text-xs text-stone-500">
+        <div className="text-xs text-ink-muted">
           {filterSummary.visibleOpeningCards} visible · {filterSummary.hiddenOpeningCards} hidden ·{" "}
           filters: {filterSummary.activeFilterLabels.join(", ")} · top visible bucket:{" "}
           {filterSummary.topVisibleBucket?.label ?? "none"}
@@ -230,7 +230,7 @@ export function OpeningWeaknessMapPanel({
       </div>
 
       {filteredMap.buckets.length === 0 ? (
-        <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
+        <div className="bg-paper-2 p-3 text-sm text-ink-muted">
           No opening-phase mistake cards match these filters.
         </div>
       ) : (
@@ -239,10 +239,10 @@ export function OpeningWeaknessMapPanel({
             {filteredMap.buckets.map((bucket) => (
               <button
                 key={bucket.id}
-                className={`rounded-md border px-3 py-2 text-left text-sm ${
+                className={`border-[1.5px] px-3 py-2 text-left text-sm ${
                   selectedBucket?.id === bucket.id
-                    ? "border-amber-700 bg-amber-950/40 text-amber-100"
-                    : "border-stone-800 bg-black/30 text-stone-300"
+                    ? "border-dashed border-spot bg-spot-tint text-ink"
+                    : "border-ink bg-paper-2 text-ink-2"
                 }`}
                 onClick={() => setSelectedBucketId(bucket.id)}
               >
@@ -250,7 +250,7 @@ export function OpeningWeaknessMapPanel({
                   <span className="font-medium">{bucket.label}</span>
                   <span className="font-mono text-xs">{bucket.count}</span>
                 </div>
-                <div className="text-xs text-stone-500">
+                <div className="text-xs text-ink-muted">
                   {bucket.missed} missed · {bucket.successRate}% success
                 </div>
               </button>
@@ -258,11 +258,11 @@ export function OpeningWeaknessMapPanel({
           </div>
 
           {selectedBucket ? (
-            <div className="grid gap-3 rounded-md bg-black/30 p-3 text-sm">
+            <div className="grid gap-3 bg-paper-2 p-3 text-sm">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <div className="font-medium text-stone-100">{selectedBucket.label}</div>
-                  <div className="text-xs text-stone-500">
+                  <div className="font-medium text-ink">{selectedBucket.label}</div>
+                  <div className="text-xs text-ink-muted">
                     {selectedBucket.count} cards · {selectedBucket.remembered} remembered ·{" "}
                     {selectedBucket.missed} missed
                   </div>
@@ -288,8 +288,8 @@ export function OpeningWeaknessMapPanel({
                 </Detail>
               </div>
 
-              <div className="rounded-md border border-stone-800 bg-stone-950 p-2 text-stone-200">
-                <span className="text-stone-500">Next action: </span>
+              <div className="border-[1.5px] border-ink bg-paper p-2 text-ink-2">
+                <span className="text-ink-muted">Next action: </span>
                 {selectedBucket.recommendedNextAction}
               </div>
 
@@ -297,13 +297,13 @@ export function OpeningWeaknessMapPanel({
                 {selectedBucket.signals.slice(0, 6).map((signal) => (
                   <div
                     key={signal.cardId}
-                    className="grid gap-2 rounded-md bg-stone-950 px-3 py-2"
+                    className="grid gap-2 bg-paper px-3 py-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-stone-200">
+                      <span className="text-ink-2">
                         Ply {signal.ply}: {signal.moveSan}
                       </span>
-                      <span className="text-xs text-stone-500">
+                      <span className="text-xs text-ink-muted">
                         {signal.verdict} · {signal.tags.join(", ") || "no tags"}
                       </span>
                     </div>
@@ -312,7 +312,7 @@ export function OpeningWeaknessMapPanel({
                 ))}
               </div>
 
-              <div className="text-xs text-stone-500">
+              <div className="text-xs text-ink-muted">
                 Review queue: {buildOpeningWeaknessReviewCardIds(selectedBucket).length} unique cards.
               </div>
             </div>
@@ -325,9 +325,9 @@ export function OpeningWeaknessMapPanel({
 
 function Metric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-md bg-black/30 p-3">
-      <div className="text-xs text-stone-500">{label}</div>
-      <div className="text-sm font-semibold text-amber-100">{value}</div>
+    <div className="bg-paper-2 p-3">
+      <div className="text-xs text-ink-muted">{label}</div>
+      <div className="text-sm font-semibold text-ink">{value}</div>
     </div>
   );
 }
@@ -335,8 +335,8 @@ function Metric({ label, value }: { label: string; value: number | string }) {
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <div className="text-stone-500">{label}</div>
-      <div className="text-stone-300">{children}</div>
+      <div className="text-ink-muted">{label}</div>
+      <div className="text-ink-2">{children}</div>
     </div>
   );
 }

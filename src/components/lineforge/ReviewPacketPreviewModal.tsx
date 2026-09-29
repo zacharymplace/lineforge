@@ -51,23 +51,23 @@ export function ReviewPacketPreviewModal({ packet, onClose }: ReviewPacketPrevie
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-black/70 px-4 py-6">
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-paper-2 px-4 py-6">
       <div
-        className="grid max-h-[90vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-4 shadow-2xl"
+        className="grid max-h-[90vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-4 overflow-hidden border-[1.5px] border-ink bg-paper p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-800 pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink pb-3">
           <div>
             <h2
               id={titleId}
-              className="text-lg font-semibold text-amber-100"
+              className="text-lg font-semibold text-ink"
             >
               {getReviewPacketTitle(packet)}
             </h2>
-            <p id={descriptionId} className="text-sm text-stone-500">
+            <p id={descriptionId} className="text-sm text-ink-muted">
               {packet.sourceType === "card" ? "Mistake card packet" : "Move packet"} ·{" "}
               {packet.sourceGameName ?? packet.sourceGameId ?? "Local LineForge data"}
             </p>
@@ -79,23 +79,23 @@ export function ReviewPacketPreviewModal({ packet, onClose }: ReviewPacketPrevie
 
         <div className="grid min-h-0 gap-3 overflow-auto pr-1">
           <div className="grid gap-2">
-            <div className="text-sm font-medium text-stone-300">Markdown preview</div>
-            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-stone-800 bg-black/40 p-3 text-xs leading-relaxed text-stone-200">
+            <div className="text-sm font-medium text-ink-2">Markdown preview</div>
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap border-[1.5px] border-ink bg-paper-2 p-3 text-xs leading-relaxed text-ink-2">
               {markdownPreview}
             </pre>
           </div>
 
-          <details className="rounded-md border border-stone-800 bg-black/30 p-3">
-            <summary className="cursor-pointer text-sm font-medium text-stone-300">
+          <details className="border-[1.5px] border-ink bg-paper-2 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-ink-2">
               JSON preview
             </summary>
-            <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-black/50 p-3 text-xs leading-relaxed text-stone-300">
+            <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap bg-paper-2 p-3 text-xs leading-relaxed text-ink-2">
               {jsonPreview}
             </pre>
           </details>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-stone-800 pt-3">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-ink pt-3">
           <button
             className="lf-button-primary"
             title={getReviewPacketFilename(packet, "markdown")}

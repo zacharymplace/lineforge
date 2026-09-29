@@ -133,10 +133,10 @@ export function EngineAnalysisPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Engine analysis</h2>
-        <p className="text-sm text-stone-500">
+        <h2 className="text-lg font-semibold text-ink">Engine analysis</h2>
+        <p className="text-sm text-ink-muted">
           Optional local Stockfish review for one selected position at a time.
         </p>
       </div>
@@ -164,31 +164,31 @@ export function EngineAnalysisPanel({
         </button>
       </div>
 
-      <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
+      <div className="grid gap-2 bg-paper-2 p-3 text-sm">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-stone-500">Target</span>
-          <span className="text-stone-100">{targetLabel}</span>
+          <span className="text-ink-muted">Target</span>
+          <span className="text-ink">{targetLabel}</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-stone-500">Status</span>
-          <span className="font-mono text-amber-100" role="status" aria-live="polite">
+          <span className="text-ink-muted">Status</span>
+          <span className="font-mono text-ink" role="status" aria-live="polite">
             {status}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-stone-500">Depth</span>
-          <span className="font-mono text-stone-100">{normalizeEngineDepth(depth)}</span>
+          <span className="text-ink-muted">Depth</span>
+          <span className="font-mono text-ink">{normalizeEngineDepth(depth)}</span>
         </div>
         <details>
-          <summary className="cursor-pointer text-stone-500">Target FEN</summary>
-          <code className="mt-2 block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+          <summary className="cursor-pointer text-ink-muted">Target FEN</summary>
+          <code className="mt-2 block break-all bg-paper-2 p-2 text-xs text-ink">
             {targetFen}
           </code>
         </details>
       </div>
 
       <label className="grid gap-1 text-sm">
-        <span className="text-stone-500">Analysis depth</span>
+        <span className="text-ink-muted">Analysis depth</span>
         <select
           className="lf-field"
           value={depth}
@@ -233,14 +233,14 @@ export function EngineAnalysisPanel({
       </div>
 
       {error ? (
-        <div className="text-sm text-red-200" role="alert">
+        <div className="text-sm text-spot font-bold" role="alert">
           {error}
         </div>
       ) : null}
-      <StatusHint message={confirmation} className="text-sm text-emerald-200" />
+      <StatusHint message={confirmation} className="text-sm text-data" />
       {isResultStale ? (
         <div
-          className="rounded-md border border-amber-800 bg-amber-950/50 p-3 text-sm text-amber-100"
+          className="border-[1.5px] border-dashed border-spot bg-spot-tint p-3 text-sm text-ink"
           role="status"
           aria-live="polite"
         >
@@ -249,8 +249,8 @@ export function EngineAnalysisPanel({
       ) : null}
 
       {visibleResult ? (
-        <div className="grid gap-2 rounded-md bg-black/30 p-3 text-sm">
-          <div className="rounded-md bg-black/30 p-2 text-xs text-stone-400">
+        <div className="grid gap-2 bg-paper-2 p-3 text-sm">
+          <div className="bg-paper-2 p-2 text-xs text-ink-muted">
             {getStoredAnalysisLabel(visibleResultKind)}
           </div>
           <ResultRow
@@ -284,7 +284,7 @@ export function EngineAnalysisPanel({
           ) : null}
         </div>
       ) : (
-        <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
+        <div className="bg-paper-2 p-3 text-sm text-ink-muted">
           No analysis result yet.
         </div>
       )}
@@ -295,8 +295,8 @@ export function EngineAnalysisPanel({
 function ResultRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="text-stone-500">{label}</span>
-      <span className="font-mono text-stone-100">{value}</span>
+      <span className="text-ink-muted">{label}</span>
+      <span className="font-mono text-ink">{value}</span>
     </div>
   );
 }

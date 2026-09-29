@@ -48,12 +48,12 @@ export function GameLibraryPanel({
   }
 
   return (
-    <section className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
+    <section className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
       <div>
-        <h2 className="text-base font-semibold text-stone-100">Games</h2>
-        <p className="text-sm text-stone-500">
-          Current: <span className="text-amber-100">{activeGameDisplayName}</span>
-          <span className="ml-2 text-xs text-stone-400">
+        <h2 className="text-base font-semibold text-ink">Games</h2>
+        <p className="text-sm text-ink-muted">
+          Current: <span className="text-ink">{activeGameDisplayName}</span>
+          <span className="ml-2 text-xs text-ink-muted">
             {isDraftGame ? "Draft game" : hasUnsavedChanges ? "Unsaved changes" : "Saved"}
           </span>
         </p>
@@ -90,23 +90,23 @@ export function GameLibraryPanel({
         </div>
       ) : null}
 
-      <div className="max-h-72 overflow-auto rounded-md border border-stone-800">
+      <div className="max-h-72 overflow-auto border-[1.5px] border-ink">
         {summaries.length === 0 ? (
-          <div className="p-3 text-sm text-stone-500">No saved games yet.</div>
+          <div className="p-3 text-sm text-ink-muted">No saved games yet.</div>
         ) : (
           summaries.map((summary) => (
             <div
               key={summary.id}
-              className="grid gap-2 border-b border-stone-800 p-3 last:border-b-0 sm:grid-cols-[1fr_auto]"
+              className="grid gap-2 border-b border-ink p-3 last:border-b-0 sm:grid-cols-[1fr_auto]"
             >
               <div>
-                <div className="font-medium text-stone-100">
+                <div className="font-medium text-ink">
                   {summary.name}
                   {library.activeGameId === summary.id ? (
-                    <span className="ml-2 text-xs text-amber-100">active</span>
+                    <span className="ml-2 text-xs text-ink">active</span>
                   ) : null}
                 </div>
-                <div className="text-xs text-stone-500">
+                <div className="text-xs text-ink-muted">
                   {summary.moveCount} plies · updated{" "}
                   {new Date(summary.updatedAt).toLocaleString()}
                 </div>

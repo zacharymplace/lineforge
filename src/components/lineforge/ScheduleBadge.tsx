@@ -32,23 +32,23 @@ export function ScheduleBadge({ item, compact = false }: ScheduleBadgeProps) {
       role="group"
       aria-label={scheduleSummary}
     >
-      <span className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-stone-200">
+      <span className="border-[1.5px] border-ink bg-paper px-2 py-1 text-ink-2">
         {getReviewScheduleBadgeText(item)}
       </span>
-      <span className="rounded-md bg-black/30 px-2 py-1 text-amber-100">
+      <span className="bg-paper-2 px-2 py-1 text-ink">
         {getReviewSchedulePriorityLabel(item)}
       </span>
       {!compact ? (
         <>
-          <span className="rounded-md bg-black/30 px-2 py-1 text-stone-400">
+          <span className="bg-paper-2 px-2 py-1 text-ink-muted">
             {item.successRate}% success
           </span>
-          <span className="rounded-md bg-black/30 px-2 py-1 text-stone-400">
+          <span className="bg-paper-2 px-2 py-1 text-ink-muted">
             {formatReviewScheduleLastReviewed(item)}
           </span>
         </>
       ) : null}
-      <span className="text-stone-500">{getReviewScheduleCardAction(item)}</span>
+      <span className="text-ink-muted">{getReviewScheduleCardAction(item)}</span>
     </div>
   );
 }

@@ -37,11 +37,11 @@ export function ReviewSessionHistoryPanel({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-stone-100">Review session history</h2>
-          <p className="text-sm text-stone-500">
+          <h2 className="text-lg font-semibold text-ink">Review session history</h2>
+          <p className="text-sm text-ink-muted">
             Inspect completed sessions and repeat missed cards.
           </p>
         </div>
@@ -51,7 +51,7 @@ export function ReviewSessionHistoryPanel({
       </div>
 
       {summaries.length === 0 || !detail ? (
-        <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
+        <div className="bg-paper-2 p-3 text-sm text-ink-muted">
           No completed review sessions yet.
         </div>
       ) : (
@@ -63,17 +63,17 @@ export function ReviewSessionHistoryPanel({
               return (
                 <button
                   key={summary.id}
-                  className={`rounded-md border px-3 py-2 text-left text-sm ${
+                  className={`border-[1.5px] px-3 py-2 text-left text-sm ${
                     isSelected
-                      ? "border-amber-700 bg-amber-950/40 text-amber-100"
-                      : "border-stone-800 bg-black/30 text-stone-300"
+                      ? "border-dashed border-spot bg-spot-tint text-ink"
+                      : "border-ink bg-paper-2 text-ink-2"
                   }`}
                   onClick={() => setSelectedSessionId(summary.id)}
                 >
                   <div className="font-medium">
                     {summary.remembered}/{summary.totalReviewed} remembered
                   </div>
-                  <div className="text-xs text-stone-500">
+                  <div className="text-xs text-ink-muted">
                     {formatDate(summary.completedAt)}
                   </div>
                 </button>
@@ -82,13 +82,13 @@ export function ReviewSessionHistoryPanel({
           </div>
 
           <div className="grid gap-3">
-            <div className="grid gap-3 rounded-md bg-black/30 p-3 text-sm">
+            <div className="grid gap-3 bg-paper-2 p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="font-medium text-stone-100">
+                  <div className="font-medium text-ink">
                     {detail.isMissedOnlyRepeat ? "Missed-only repeat" : "Completed session"}
                   </div>
-                  <div className="text-xs text-stone-500">{detail.filterLabel}</div>
+                  <div className="text-xs text-ink-muted">{detail.filterLabel}</div>
                 </div>
                 {getMissedCardIdsFromSessionSummary(detail.summary).length > 0 ? (
                   <button
@@ -113,8 +113,8 @@ export function ReviewSessionHistoryPanel({
 
               <div className="grid gap-2 lg:grid-cols-2">
                 <div>
-                  <div className="text-stone-500">Top missed tags</div>
-                  <div className="text-stone-300">
+                  <div className="text-ink-muted">Top missed tags</div>
+                  <div className="text-ink-2">
                     {detail.summary.topMissedTags.length
                       ? detail.summary.topMissedTags
                           .map((item) => `${item.tag} (${item.count})`)
@@ -123,35 +123,35 @@ export function ReviewSessionHistoryPanel({
                   </div>
                 </div>
                 <div>
-                  <div className="text-stone-500">Next action</div>
-                  <div className="text-stone-300">{detail.summary.recommendedNextAction}</div>
+                  <div className="text-ink-muted">Next action</div>
+                  <div className="text-ink-2">{detail.summary.recommendedNextAction}</div>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-2">
-              <div className="text-sm font-medium text-stone-100">Reviewed cards</div>
+              <div className="text-sm font-medium text-ink">Reviewed cards</div>
               {detail.resultDetails.length === 0 ? (
-                <div className="rounded-md bg-black/30 p-3 text-sm text-stone-500">
+                <div className="bg-paper-2 p-3 text-sm text-ink-muted">
                   No per-card results were stored for this session.
                 </div>
               ) : (
                 detail.resultDetails.map((result) => (
                   <div
                     key={`${detail.summary.id}-${result.cardId}`}
-                    className="grid gap-1 rounded-md bg-black/30 px-3 py-2 text-sm"
+                    className="grid gap-1 bg-paper-2 px-3 py-2 text-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium text-stone-200">{result.label}</span>
-                      <span className="rounded-md border border-stone-800 px-2 py-0.5 text-xs text-amber-100">
+                      <span className="font-medium text-ink-2">{result.label}</span>
+                      <span className="border-[1.5px] border-ink px-2 py-0.5 text-xs text-ink">
                         {result.result}
                       </span>
                     </div>
-                    <div className="text-xs text-stone-500">
+                    <div className="text-xs text-ink-muted">
                       {result.verdict ?? "unknown verdict"} ·{" "}
                       {result.tags.length ? result.tags.join(", ") : "no tags"}
                     </div>
-                    <div className="text-xs text-stone-400">
+                    <div className="text-xs text-ink-muted">
                       Attempted: {result.attemptedMoveSan ?? "not recorded"} · Expected:{" "}
                       {result.expectedMoveSan ?? "unknown"}
                     </div>
@@ -168,9 +168,9 @@ export function ReviewSessionHistoryPanel({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-stone-950 p-2">
-      <div className="text-xs text-stone-500">{label}</div>
-      <div className="text-sm font-semibold text-amber-100">{value}</div>
+    <div className="bg-paper p-2">
+      <div className="text-xs text-ink-muted">{label}</div>
+      <div className="text-sm font-semibold text-ink">{value}</div>
     </div>
   );
 }

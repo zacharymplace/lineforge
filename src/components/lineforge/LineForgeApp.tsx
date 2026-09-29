@@ -510,31 +510,31 @@ export function LineForgeApp() {
   }
 
   return (
-    <main className="min-h-screen bg-[#11110f] text-stone-100">
+    <main className="min-h-screen bg-[#11110f] text-ink">
       <div className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
-        <header className="grid gap-2 border-b border-stone-800 pb-4 sm:pb-5">
+        <header className="grid gap-2 border-b border-ink pb-4 sm:pb-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-normal text-amber-100 sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
                 LineForge
               </h1>
-              <p className="max-w-3xl text-sm text-stone-400">
+              <p className="max-w-3xl text-sm text-ink-muted">
                 A private chess memory system for importing games, marking your thinking,
                 saving mistake cards, and reviewing recurring weaknesses.
               </p>
             </div>
-            <div className="max-w-full rounded-md border border-stone-800 px-3 py-2 text-xs text-stone-500">
+            <div className="max-w-full border-[1.5px] border-ink px-3 py-2 text-xs text-ink-muted">
               Local-first · no accounts · optional local engine
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <span
-              className={`rounded-md border px-3 py-1 ${
+              className={`border-[1.5px] px-3 py-1 ${
                 isDraftGame
-                  ? "border-sky-800 bg-sky-950/60 text-sky-200"
+                  ? "border-dotted border-data border-l-[6px] bg-data-tint text-ink"
                   : hasDirtyGame
-                    ? "border-amber-800 bg-amber-950/60 text-amber-100"
-                    : "border-emerald-900 bg-emerald-950/50 text-emerald-200"
+                    ? "border-dashed border-spot bg-spot-tint text-ink"
+                    : "border-data border-l-[6px] bg-data-tint text-data"
               }`}
             >
               {isDraftGame
@@ -546,7 +546,7 @@ export function LineForgeApp() {
             {storageMessages.map((message) => (
               <span
                 key={message}
-                className="rounded-md border border-red-900 bg-red-950/60 px-3 py-1 text-red-100"
+                className="border-[1.5px] border-spot border-l-[6px] bg-spot-tint px-3 py-1 text-ink"
                 role="alert"
               >
                 {message}
@@ -563,10 +563,10 @@ export function LineForgeApp() {
               return (
                 <button
                   key={section.id}
-                  className={`min-h-10 min-w-[5.75rem] shrink-0 rounded-md border px-2.5 py-1.5 text-left text-sm transition md:min-w-28 md:px-3 md:py-2 ${
+                  className={`min-h-10 min-w-[5.75rem] shrink-0 border-[1.5px] px-2.5 py-1.5 text-left text-sm transition md:min-w-28 md:px-3 md:py-2 ${
                     isActive
-                      ? "border-amber-700 bg-amber-950/50 text-amber-100"
-                      : "border-stone-800 bg-stone-950 text-stone-400 hover:border-stone-700 hover:text-stone-100"
+                      ? "border-dashed border-spot bg-spot-tint text-ink"
+                      : "border-ink bg-paper text-ink-muted hover:border-spot hover:text-ink"
                   }`}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
@@ -575,7 +575,7 @@ export function LineForgeApp() {
                   onClick={() => setActiveWorkflow(section.id)}
                 >
                   <span className="block font-medium">{section.label}</span>
-                  <span className="hidden text-xs text-stone-500 lg:block">{section.description}</span>
+                  <span className="hidden text-xs text-ink-muted lg:block">{section.description}</span>
                 </button>
               );
             })}
@@ -642,8 +642,8 @@ export function LineForgeApp() {
                 onSaveAnnotation={handleSaveAnnotation}
                 onCreateCard={handleCreateCard}
               />
-              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
-                <summary className="cursor-pointer text-sm font-medium text-stone-100">
+              <details className="border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
+                <summary className="cursor-pointer text-sm font-medium text-ink">
                   Optional local engine analysis
                 </summary>
                 <div className="mt-4">
@@ -722,15 +722,15 @@ export function LineForgeApp() {
               aria-labelledby="lineforge-workflow-data"
             >
               <WorkflowHeading sectionId="data" />
-              <section className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
-                <h2 className="text-lg font-semibold text-stone-100">Local data</h2>
-                <p className="mt-1 text-sm text-stone-500">
+              <section className="border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
+                <h2 className="text-lg font-semibold text-ink">Local data</h2>
+                <p className="mt-1 text-sm text-ink-muted">
                   LineForge stores study data in this browser, exports local JSON backups,
                   and does not use accounts, cloud sync, or external services.
                 </p>
               </section>
-              <details className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
-                <summary className="cursor-pointer text-sm font-medium text-stone-100">
+              <details className="border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
+                <summary className="cursor-pointer text-sm font-medium text-ink">
                   Backup and JSON export tools
                 </summary>
                 <div className="mt-4">
@@ -753,11 +753,11 @@ function WorkflowHeading({ sectionId }: { sectionId: WorkflowSection }) {
   }
 
   return (
-    <div className="rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
-      <h2 id={`lineforge-workflow-${section.id}`} className="text-lg font-semibold text-stone-100 sm:text-xl">
+    <div className="border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
+      <h2 id={`lineforge-workflow-${section.id}`} className="text-lg font-semibold text-ink sm:text-xl">
         {section.label}
       </h2>
-      <p className="mt-1 text-sm text-stone-500">{section.description}</p>
+      <p className="mt-1 text-sm text-ink-muted">{section.description}</p>
     </div>
   );
 }

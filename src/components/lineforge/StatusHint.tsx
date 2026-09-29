@@ -5,7 +5,7 @@ type StatusHintProps = {
   className?: string;
 };
 
-export function StatusHint({ message, className = "text-xs text-emerald-300" }: StatusHintProps) {
+export function StatusHint({ message, className = "text-xs text-data" }: StatusHintProps) {
   if (!message) {
     return null;
   }

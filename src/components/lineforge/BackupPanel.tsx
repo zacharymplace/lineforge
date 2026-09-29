@@ -40,10 +40,10 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-stone-800 bg-stone-950/80 p-4">
+    <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Backup</h2>
-        <p className="text-sm text-stone-500">Export or restore local LineForge data as JSON.</p>
+        <h2 className="text-lg font-semibold text-ink">Backup</h2>
+        <p className="text-sm text-ink-muted">Export or restore local LineForge data as JSON.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -59,11 +59,11 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
         />
       </div>
       {isError && message ? (
-        <div className="text-sm text-red-200" role="alert">
+        <div className="text-sm text-spot font-bold" role="alert">
           {message}
         </div>
       ) : (
-        <StatusHint message={message} className="text-sm text-stone-400" />
+        <StatusHint message={message} className="text-sm text-ink-muted" />
       )}
     </section>
   );

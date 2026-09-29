@@ -87,18 +87,18 @@ export function GameImportPanel({
   }
 
   return (
-    <section className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
+    <section className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
       <div>
-        <h2 className="text-base font-semibold text-stone-100">PGN import</h2>
-        <p className="text-sm text-stone-500">
+        <h2 className="text-base font-semibold text-ink">PGN import</h2>
+        <p className="text-sm text-ink-muted">
           Preview and inspect a game record before replacing the active board.
         </p>
       </div>
-      <p className="text-sm text-stone-500">
+      <p className="text-sm text-ink-muted">
         Paste a PGN or try the demo game to start building mistake cards.
       </p>
       {hasUnsavedChanges ? (
-        <div className="rounded-md border border-amber-900/70 bg-amber-950/30 p-3 text-sm text-amber-100">
+        <div className="border-[1.5px] border-dashed border-spot bg-spot-tint p-3 text-sm text-ink">
           Current game has unsaved changes. Previewing is safe; confirming an import will replace
           the active draft.
         </div>
@@ -118,28 +118,28 @@ export function GameImportPanel({
           Try demo game
         </button>
         {isError && message ? (
-          <span className="text-sm text-red-200" role="alert">
+          <span className="text-sm text-spot font-bold" role="alert">
             {message}
           </span>
         ) : (
-          <StatusHint message={message} className="text-sm text-stone-400" />
+          <StatusHint message={message} className="text-sm text-ink-muted" />
         )}
       </div>
 
       {preview ? (
-        <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3 text-sm">
+        <div className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3 text-sm">
           {preview.warning ? (
             <div
-              className="rounded-md border border-amber-900/70 bg-amber-950/30 p-2 text-amber-100"
+              className="border-[1.5px] border-dashed border-spot bg-spot-tint p-2 text-ink"
               role="status"
               aria-live="polite"
             >
               {preview.warning}
             </div>
           ) : null}
-          <div className="grid gap-1 rounded-md bg-black/25 p-3">
-            <div className="text-base font-semibold text-amber-100">{preview.previewTitle}</div>
-            <div className="text-xs text-stone-400">
+          <div className="grid gap-1 bg-paper-2 p-3">
+            <div className="text-base font-semibold text-ink">{preview.previewTitle}</div>
+            <div className="text-xs text-ink-muted">
               {preview.metadata.result !== "Unknown" ? `${preview.metadata.result} · ` : ""}
               {preview.movePreview.totalPlyCount} plies
             </div>
@@ -155,15 +155,15 @@ export function GameImportPanel({
             <PreviewRow label="Validation" value={preview.validationStatus} />
           </div>
           <div>
-            <div className="mb-1 text-stone-500">Final FEN</div>
-            <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+            <div className="mb-1 text-ink-muted">Final FEN</div>
+            <code className="block break-all bg-paper-2 p-2 text-xs text-ink">
               {preview.finalFen}
             </code>
           </div>
-          <div className="grid gap-3 rounded-md bg-black/25 p-3">
+          <div className="grid gap-3 bg-paper-2 p-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-medium text-stone-200">Move preview</span>
-              <span className="text-xs text-stone-500">
+              <span className="font-medium text-ink-2">Move preview</span>
+              <span className="text-xs text-ink-muted">
                 {preview.movePreview.totalPlyCount} total plies
               </span>
             </div>
@@ -178,7 +178,7 @@ export function GameImportPanel({
             onGoToPly={setPreviewPly}
           />
           <label className="grid gap-1">
-            <span className="text-stone-500">Draft name</span>
+            <span className="text-ink-muted">Draft name</span>
             <input
               className="lf-field"
               value={draftName}
@@ -198,30 +198,30 @@ export function GameImportPanel({
 
       <div className="grid gap-3 text-sm">
         <div>
-          <div className="mb-1 text-stone-500">Current FEN</div>
-          <code className="block break-all rounded-md bg-black/35 p-3 text-xs text-amber-100">
+          <div className="mb-1 text-ink-muted">Current FEN</div>
+          <code className="block break-all bg-paper-2 p-3 text-xs text-ink">
             {fen}
           </code>
         </div>
         <div>
-          <div className="mb-1 text-stone-500">Current PGN</div>
-          <code className="block max-h-32 overflow-auto whitespace-pre-wrap rounded-md bg-black/35 p-3 text-xs text-amber-100">
+          <div className="mb-1 text-ink-muted">Current PGN</div>
+          <code className="block max-h-32 overflow-auto whitespace-pre-wrap bg-paper-2 p-3 text-xs text-ink">
             {pgn || "(No moves yet)"}
           </code>
         </div>
       </div>
 
-      <div className="max-h-64 overflow-auto rounded-md border border-stone-800">
+      <div className="max-h-64 overflow-auto border-[1.5px] border-ink">
         {game.moves.length === 0 ? (
-          <div className="p-3 text-sm text-stone-500">Moves will appear here.</div>
+          <div className="p-3 text-sm text-ink-muted">Moves will appear here.</div>
         ) : (
           game.moves.map((move) => (
             <button
               key={`${move.ply}-${move.san}`}
-              className="flex w-full items-center justify-between border-b border-stone-800 px-3 py-2 text-left text-sm text-stone-300 last:border-b-0 hover:bg-stone-900"
+              className="flex w-full items-center justify-between border-b border-ink px-3 py-2 text-left text-sm text-ink-2 last:border-b-0 hover:bg-paper-3"
               onClick={() => onGoToPly(move.ply)}
             >
-              <span className="font-mono text-stone-500">{move.ply}</span>
+              <span className="font-mono text-ink-muted">{move.ply}</span>
               <span>{move.san}</span>
             </button>
           ))
@@ -249,18 +249,18 @@ function PreviewBoardScrubber({
   }
 
   return (
-    <div className="grid gap-3 rounded-md border border-stone-800 bg-black/25 p-3">
+    <div className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="font-medium text-stone-200">Preview board</div>
-          <div className="text-xs text-stone-500">Imported PGN only</div>
+          <div className="font-medium text-ink-2">Preview board</div>
+          <div className="text-xs text-ink-muted">Imported PGN only</div>
         </div>
-        <div className="font-mono text-xs text-stone-400">
+        <div className="font-mono text-xs text-ink-muted">
           Ply {safePly} / {preview.boardPreview.totalPlyCount}
         </div>
       </div>
       <div className="grid gap-3 md:grid-cols-[180px_1fr]">
-        <div className="max-w-[180px] overflow-hidden rounded-md border border-stone-800 bg-stone-950 p-1">
+        <div className="max-w-[180px] overflow-hidden border-[1.5px] border-ink bg-paper p-1">
           <Chessboard
             options={{
               id: "lineforge-import-preview-board",
@@ -273,9 +273,9 @@ function PreviewBoardScrubber({
           />
         </div>
         <div className="grid content-start gap-3">
-          <div className="grid gap-1 rounded-md bg-black/30 p-2">
-            <div className="text-xs text-stone-500">Current move</div>
-            <div className="font-mono text-amber-100">{moveLabel}</div>
+          <div className="grid gap-1 bg-paper-2 p-2">
+            <div className="text-xs text-ink-muted">Current move</div>
+            <div className="font-mono text-ink">{moveLabel}</div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="lf-button" onClick={() => goToPly(0)}>
@@ -295,8 +295,8 @@ function PreviewBoardScrubber({
             </button>
           </div>
           <div>
-            <div className="mb-1 text-xs text-stone-500">Preview FEN</div>
-            <code className="block break-all rounded-md bg-black/35 p-2 text-xs text-amber-100">
+            <div className="mb-1 text-xs text-ink-muted">Preview FEN</div>
+            <code className="block break-all bg-paper-2 p-2 text-xs text-ink">
               {position.fen}
             </code>
           </div>
@@ -315,15 +315,15 @@ function MoveSnippetList({
 }) {
   return (
     <div className="grid gap-2">
-      <div className="text-xs text-stone-500">{label}</div>
+      <div className="text-xs text-ink-muted">{label}</div>
       <div className="flex flex-wrap gap-2">
         {moves.length === 0 ? (
-          <span className="text-stone-500">No moves.</span>
+          <span className="text-ink-muted">No moves.</span>
         ) : (
           moves.map((move) => (
             <span
               key={`${label}-${move.ply}-${move.san}`}
-              className="rounded-md border border-stone-800 bg-stone-950 px-2 py-1 font-mono text-xs text-stone-200"
+              className="border-[1.5px] border-ink bg-paper px-2 py-1 font-mono text-xs text-ink-2"
             >
               {move.ply}. {move.san}
             </span>
@@ -336,9 +336,9 @@ function MoveSnippetList({
 
 function PreviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-black/25 p-2">
-      <div className="text-xs text-stone-500">{label}</div>
-      <div className="text-stone-200">{value}</div>
+    <div className="bg-paper-2 p-2">
+      <div className="text-xs text-ink-muted">{label}</div>
+      <div className="text-ink-2">{value}</div>
     </div>
   );
 }

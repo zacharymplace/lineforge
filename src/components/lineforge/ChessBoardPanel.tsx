@@ -26,7 +26,7 @@ export function ChessBoardPanel({
 
   return (
     <section className="grid min-w-0 gap-3 sm:gap-4">
-      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-lg border border-stone-700 bg-stone-950 p-1.5 shadow-2xl shadow-black/40 sm:p-2 xl:max-w-[30rem]">
+      <div className="mx-auto w-full max-w-lg overflow-hidden border-[1.5px] border-ink bg-paper p-1.5 sm:p-2 xl:max-w-[30rem]">
         <Chessboard
           options={{
             id: "lineforge-board",
@@ -41,7 +41,7 @@ export function ChessBoardPanel({
         />
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-stone-800 bg-stone-950/80 p-3 sm:p-4">
+      <div className="grid gap-3 border-[1.5px] border-ink bg-paper-2 p-3 sm:p-4">
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <button className="lf-button" onClick={() => onGoToPly(0)}>
             Start
@@ -63,15 +63,15 @@ export function ChessBoardPanel({
           </button>
         </div>
 
-        <div className="grid gap-2 text-sm text-stone-300">
+        <div className="grid gap-2 text-sm text-ink-2">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-stone-500">Ply</span>
+            <span className="text-ink-muted">Ply</span>
             <span className="font-mono">
               {currentPly} / {game.moves.length}
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-stone-500">Current move</span>
+            <span className="text-ink-muted">Current move</span>
             <span className="font-mono">{currentMove?.san ?? "Start position"}</span>
           </div>
         </div>
