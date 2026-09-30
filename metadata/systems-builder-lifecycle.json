@@ -8,7 +8,7 @@
     "repository": "zacharymplace/lineforge",
     "path": ".",
     "branch": "main",
-    "commit": "4970f91"
+    "commit": "f3b6c01"
   },
   "evidence": [
     {
@@ -42,7 +42,7 @@
       "result": "built-in demo walkthrough already defines the five workflow surfaces needed for portfolio evidence"
     }
   ],
-  "last_verified_at": "2026-08-23T22:50:15Z",
+  "last_verified_at": "2026-09-30T08:09:15Z",
   "next_action": {
     "description": "Capture a consistent screenshot set for the Play, Study, Review, Weaknesses, and Data workflows using the built-in demo game and the existing demo walkthrough, then reconcile the case study and portfolio-facing documentation against that captured product evidence before moving to the next roadmap item."
   },
