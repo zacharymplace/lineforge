@@ -6,6 +6,42 @@ A local-first chess memory system for turning games into reviewable decisions.
 
 LineForge is a private post-game study app. It helps you import games, inspect the moves before replacing your board, annotate what you thought, create mistake cards from your own positions, review those cards by playing the move, schedule due reviews from local history, map recurring opening weaknesses, and export compact learning artifacts.
 
+## First run
+
+Requires Git, **Node.js 22.18 or newer**, npm, and a modern browser. The version
+below is a local v0.1 prototype; the study loop does not require an account,
+external AI service, or Stockfish analysis.
+
+```bash
+git clone https://github.com/zacharymplace/lineforge.git
+cd lineforge
+npm ci
+npm run dev
+```
+
+Open the local URL printed by Next.js (normally `http://localhost:3000`). Keep
+the terminal open and press Ctrl+C to stop. The development command uses POSIX
+environment-variable syntax; on Windows use WSL or run `npx next dev` from
+PowerShell without the optional polling flag.
+
+Start with **Play → Try demo game → Import game**, then save the draft. Annotate
+a move in Study, create a mistake card, and inspect it in Review. The full demo
+steps are below. Browser `localStorage` holds study data: export a JSON backup
+before clearing site data or switching browser/origin.
+
+## Example screen and prototype limits
+
+![LineForge development screen showing the board and demo PGN import preview](docs/screenshots/01-play.png)
+
+This checked-in development capture comes from the
+[September 7 demo review](docs/demo-review-2026-09-07.md); current UI details may
+have changed. It demonstrates the preview workflow, not real-player learning
+gains. Game-recall cards rehearse the recorded move; a saved legal correction
+is not automatically the best move. Coach lenses and summaries are deterministic,
+and optional engine analysis is separate from the core loop. There are no
+accounts, cloud sync, or multiplayer. Broader usability and accessibility
+validation remain ongoing work.
+
 ## Core Loop
 
 1. Import a PGN.
@@ -199,7 +235,7 @@ Recommended screenshots for a portfolio page or case study:
 - Weaknesses / opening map + trends: opening weakness buckets, filters, trend rows, and recommended focus.
 - Data / backup + review packets: review packet preview modal, Markdown/JSON export, and local backup controls.
 
-No screenshots are checked into this repo yet. See [`docs/case-study.md`](docs/case-study.md) for a portfolio-ready narrative and [`docs/demo-walkthrough.md`](docs/demo-walkthrough.md) for the manual sample-data walkthrough.
+Development screenshots are checked into [`docs/screenshots/`](docs/screenshots/). See [`docs/case-study.md`](docs/case-study.md) for a portfolio-ready narrative and [`docs/demo-walkthrough.md`](docs/demo-walkthrough.md) for the manual sample-data walkthrough.
 
 ## Local Development
 
@@ -247,7 +283,7 @@ See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the Stockfish package
 
 Disciplined next steps:
 
-- Capture a consistent screenshot set for the five workflow sections.
+- Refresh the development screenshots into a consistent current portfolio set.
 - Add a sample-data walkthrough built around the demo game.
 - Integrate the case study into a portfolio page.
 - Consider an optional deployed static demo only after licensing and deployment constraints are handled.
