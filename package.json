@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:lineforge-smoke": "node scripts/lineforge-smoke.mjs && npm run test:game-replay && npm run test:correction-cards && npm run test:storage",
+    "test:lineforge-smoke": "node scripts/lineforge-smoke.mjs && npm run test:game-replay && npm run test:correction-cards && npm run test:storage && npm run test:backup-history",
+    "test:backup-history": "node --experimental-strip-types scripts/backup-history-smoke.mjs",
     "test:storage": "node --experimental-strip-types scripts/storage-smoke.mjs",
     "test:correction-cards": "node --experimental-strip-types scripts/correction-cards-smoke.mjs",
     "test:game-replay": "node --experimental-strip-types scripts/game-replay-smoke.mjs"

@@ -23,9 +23,7 @@ import {
   evaluateDrillSan,
 } from "@/lib/drill-queue/review";
 import {
-  clearReviewSessionSummaries,
   loadReviewSessionSummaries,
-  saveReviewSessionSummary,
   type ReviewSessionSummary,
 } from "@/lib/drill-queue/session";
 import {
@@ -136,11 +134,11 @@ export function LineForgeApp() {
   const [hydrated, setHydrated] = useState(false);
   const [saveAttempt, setSaveAttempt] = useState(0);
   const [localSave, setLocalSave] = useState<{
-    game: LineForgeGame; library: MoveLedgerLibrary; cards: MistakeCard[];
+    game: LineForgeGame; library: MoveLedgerLibrary; cards: MistakeCard[]; sessionSummaries: ReviewSessionSummary[];
     attempt: number; saved: boolean;
   } | null>(null);
   const saveIsCurrent = localSave?.game === game && localSave?.library === library &&
-    localSave?.cards === cards && localSave?.attempt === saveAttempt;
+    localSave?.cards === cards && localSave?.sessionSummaries === sessionSummaries && localSave?.attempt === saveAttempt;
 
   useEffect(() => {
     const storedLibrary = loadStoredLibrary();
@@ -169,13 +167,13 @@ export function LineForgeApp() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const result = saveStudyData(game, library, cards);
+    const result = saveStudyData(game, library, cards, sessionSummaries);
     let active = true;
     queueMicrotask(() => {
-      if (active) setLocalSave({ game, library, cards, attempt: saveAttempt, saved: result.saved });
+      if (active) setLocalSave({ game, library, cards, sessionSummaries, attempt: saveAttempt, saved: result.saved });
     });
     return () => { active = false; };
-  }, [game, library, cards, hydrated, saveAttempt]);
+  }, [game, library, cards, sessionSummaries, hydrated, saveAttempt]);
 
   const replayChess = useMemo(() => loadGameAtPly(game, currentPly), [game, currentPly]);
   const stats = useMemo(() => calculateMistakeStats(cards), [cards]);
@@ -415,11 +413,10 @@ export function LineForgeApp() {
   }
 
   function handleCompleteSession(summary: ReviewSessionSummary) {
-    setSessionSummaries(saveReviewSessionSummary(summary));
+    setSessionSummaries((current) => [summary, ...current.filter((item) => item.id !== summary.id)].slice(0, 20));
   }
 
   function handleClearSessionHistory() {
-    clearReviewSessionSummaries();
     setSessionSummaries([]);
   }
 
@@ -478,7 +475,7 @@ export function LineForgeApp() {
   }
 
   function handleExportBackup() {
-    return serializeBackup(createBackup(upsertSavedGame(library, game, game.name), cards));
+    return serializeBackup(createBackup(upsertSavedGame(library, game, game.name), cards, sessionSummaries));
   }
 
   function handleImportBackup(json: string) {
@@ -493,6 +490,7 @@ export function LineForgeApp() {
         backup.savedGames[0] ??
         createEmptyGame();
 
+      if (backup.sessionSummaries !== undefined) setSessionSummaries(backup.sessionSummaries);
       setLibrary(nextLibrary);
       setCards(backup.mistakeCards);
       setGame(nextGame);

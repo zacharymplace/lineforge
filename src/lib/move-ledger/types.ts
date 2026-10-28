@@ -118,6 +118,8 @@ export type MistakeStats = {
 };
 
 export type LineForgeBackup = {
+  /** Absent in older v1 backups; preserve existing history on restore. */
+  sessionSummaries?: import("../drill-queue/session").ReviewSessionSummary[];
   lineforgeBackupVersion: 1;
   exportedAt: string;
   savedGames: LineForgeGame[];

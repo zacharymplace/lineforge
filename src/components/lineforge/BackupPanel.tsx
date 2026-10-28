@@ -14,7 +14,7 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
   const requestId = useRef(0);
   const [reading, setReading] = useState(false);
   const [preview, setPreview] = useState<{
-    json: string; filename: string; games: number; cards: number;
+    json: string; filename: string; games: number; cards: number; sessions?: number;
   } | null>(null);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
@@ -56,7 +56,7 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
       const json = await file.text();
       if (id !== requestId.current) return;
       const backup = parseBackupJson(json);
-      setPreview({ json, filename: file.name, games: backup.savedGames.length, cards: backup.mistakeCards.length });
+      setPreview({ json, filename: file.name, games: backup.savedGames.length, cards: backup.mistakeCards.length, sessions: backup.sessionSummaries?.length });
       setMessage("Backup preview ready. Apply is required to replace current study data.");
     } catch (error) {
       if (id !== requestId.current) return;
@@ -102,6 +102,7 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
           <h3 className="font-semibold">Replace current study data?</h3>
           <p className="break-all">{preview.filename}</p>
           <p>Incoming: {preview.games} saved games · {preview.cards} mistake cards</p>
+          <p>{preview.sessions === undefined ? "Older backup: completed session history is not included. Existing history will be kept." : `${preview.sessions} completed sessions included. These replace current session history, including when the count is zero.`}</p>
           <p>This replaces your current game library, mistake cards and active study game, including unsaved game changes. It does not merge them. Export your current data first if you want to keep it.</p>
           <div className="flex flex-wrap gap-2">
             <button className="lf-button-primary" onClick={applyPreview}>Apply replacement</button>

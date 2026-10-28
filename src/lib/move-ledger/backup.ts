@@ -13,6 +13,7 @@ import type {
 export function createBackup(
   library: MoveLedgerLibrary,
   mistakeCards: MistakeCard[],
+  sessionSummaries: import("../drill-queue/session").ReviewSessionSummary[] = [],
 ): LineForgeBackup {
   return {
     lineforgeBackupVersion: 1,
@@ -20,6 +21,7 @@ export function createBackup(
     savedGames: library.savedGames,
     activeGameId: library.activeGameId,
     mistakeCards,
+    sessionSummaries,
   };
 }
 
@@ -187,7 +189,9 @@ function isBackup(value: unknown): value is LineForgeBackup {
     !value.savedGames.every(isGame) ||
     !(value.activeGameId === null || isString(value.activeGameId)) ||
     !Array.isArray(value.mistakeCards) ||
-    !value.mistakeCards.every(isCard)
+    !value.mistakeCards.every(isCard) ||
+    (value.sessionSummaries !== undefined &&
+      (!Array.isArray(value.sessionSummaries) || !value.sessionSummaries.every(isSessionSummary)))
   ) {
     return false;
   }
@@ -196,4 +200,48 @@ function isBackup(value: unknown): value is LineForgeBackup {
     value.activeGameId === null ||
     value.savedGames.some((game) => game.id === value.activeGameId)
   );
+}
+
+// Validate imported history before any replacement. Historical card IDs may no
+// longer exist, so retain them rather than fabricating or discarding results.
+function isSessionSummary(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const count = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
+  const date = (d: unknown): d is string => isString(d) && Number.isFinite(Date.parse(d));
+  const ids = (a: unknown): a is string[] => Array.isArray(a) && a.every(isString) && new Set(a).size === a.length;
+  const filter = value.filter;
+  if (!isRecord(filter)) return false;
+  const validFilter = ["all", "missed-recently", "lowest-success-rate", "most-recent", "due-review"].includes(filter.type as string) ||
+    (filter.type === "verdict" && MOVE_VERDICTS.includes(filter.verdict as never)) ||
+    (filter.type === "tag" && MISTAKE_TAGS.includes(filter.tag as never)) ||
+    (filter.type === "missed-only-repeat" && isString(filter.sourceSessionId)) ||
+    (filter.type === "opening-weakness" && isString(filter.bucketId));
+  if (!validFilter || !isString(value.id) || !date(value.startedAt) || !date(value.completedAt) ||
+    Date.parse(value.completedAt) < Date.parse(value.startedAt) ||
+    ![5, 10, 15, "all"].includes(value.sessionSize as never) ||
+    !ids(value.selectedCardIds) || !ids(value.missedCardIds) ||
+    ![value.totalReviewed, value.sessionCardCount, value.remembered, value.missed, value.skipped].every(count) ||
+    !count(value.successRate) || value.successRate > 100 ||
+    !isString(value.recommendedNextAction) ||
+    !Array.isArray(value.topMissedTags) || !value.topMissedTags.every(item => isRecord(item) && MISTAKE_TAGS.includes(item.tag as never) && count(item.count)) ||
+    !Array.isArray(value.verdictBreakdown) || !value.verdictBreakdown.every(item => isRecord(item) && MOVE_VERDICTS.includes(item.verdict as never) && count(item.count))) return false;
+  const remembered = value.remembered as number, missed = value.missed as number, skipped = value.skipped as number;
+  if (value.sessionCardCount !== value.selectedCardIds.length ||
+    value.totalReviewed !== remembered + missed + skipped || (value.totalReviewed as number) > value.selectedCardIds.length ||
+    value.missedCardIds.length !== missed || !value.missedCardIds.every(id => value.selectedCardIds instanceof Array && value.selectedCardIds.includes(id)) ||
+    value.successRate !== (remembered + missed ? Math.round(remembered / (remembered + missed) * 100) : 0)) return false;
+  if (value.results === undefined) return true; // Earlier summaries did not store individual results.
+  if (!Array.isArray(value.results) || value.results.length !== value.totalReviewed) return false;
+  const results = value.results;
+  return results.every(result => isRecord(result) && isString(result.cardId) &&
+    (value.selectedCardIds as string[]).includes(result.cardId) && date(result.recordedAt) &&
+    ["remembered", "missed", "skipped"].includes(result.result as string) &&
+    (result.attemptedMoveSan === undefined || isString(result.attemptedMoveSan)) &&
+    (result.expectedMoveSan === undefined || isString(result.expectedMoveSan)) &&
+    (result.attemptedFenAfter === undefined || isValidFen(result.attemptedFenAfter))) &&
+    new Set(results.map(result => result.cardId)).size === results.length &&
+    results.filter(r => r.result === "remembered").length === remembered &&
+    results.filter(r => r.result === "missed").length === missed &&
+    results.filter(r => r.result === "skipped").length === skipped &&
+    results.filter(r => r.result === "missed").every(r => (value.missedCardIds as string[]).includes(r.cardId));
 }

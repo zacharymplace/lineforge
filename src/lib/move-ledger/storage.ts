@@ -44,8 +44,9 @@ function writeJson<T>(key: string, value: T): StorageWriteResult {
 }
 
 /** Separate storage keys are not an atomic transaction; try every write. */
-export function saveStudyData(game: LineForgeGame, library: MoveLedgerLibrary, cards: MistakeCard[]): StorageWriteResult {
+export function saveStudyData(game: LineForgeGame, library: MoveLedgerLibrary, cards: MistakeCard[], sessionSummaries?: import("../drill-queue/session").ReviewSessionSummary[]): StorageWriteResult {
   const results = [saveStoredGame(game), saveStoredLibrary(library), saveStoredCards(cards)];
+  if (sessionSummaries !== undefined) results.push(writeJson("lineforge.drillQueue.sessionSummaries.v1", sessionSummaries));
   const failedKeys = results.flatMap((result) => result.failedKeys);
   return { saved: failedKeys.length === 0, failedKeys };
 }

@@ -301,27 +301,33 @@ See [`docs/case-study.md`](docs/case-study.md) for a portfolio-style product nar
 ## Preview a backup replacement
 
 In Data → Backup and JSON export tools, choosing a backup validates it and
-shows the incoming saved-game and mistake-card counts. Your current data stays
+shows the incoming saved-game, mistake-card, and completed-session counts. Your current data stays
 unchanged until **Apply replacement**. This replaces the library, cards and active
 game (including an unsaved draft); it does not merge records. **Cancel** discards
 the preview. You can export your current data before applying the replacement.
 Invalid or unreadable files leave current data unchanged and clear any older
 preview. Selecting another file or cancelling while it is being read prevents
-an older read from restoring a stale preview. Backup format v1 and the existing
-replacement handler are unchanged; Apply validates the selected JSON again.
+an older read from restoring a stale preview. Backup format remains v1 with an optional `sessionSummaries` field. New exports
+include the completed history (up to the existing 20-session retention limit),
+including per-card results, attempted/expected moves, filters and summary counts.
+Apply validates the selected JSON again. Included history replaces current history;
+an explicit empty array clears it. Older v1 backups without this field preserve
+existing session history, as stated in the preview. Cancel changes nothing.
+Active sessions and preferences are not included. Malformed history rejects the
+entire import before replacement.
 
 ### Local study-data save status
 
-The header separately reports whether the current game, library and mistake cards
+The header separately reports whether the current game, library, mistake cards and completed session history
 were saved in this browser. A restored backup is first applied to the current tab;
 check this status before closing it. If browser storage is full or unavailable,
 data remains in memory: keep the tab open, export a backup from Data, and use
 **Retry local save** after resolving the storage problem. Later study-data changes
 also retry saving. A successful retry clears the failure status.
 
-These three existing storage keys are written separately, not atomically. A failed
+These four storage keys are written separately, not atomically. A failed
 save can leave mixed or older records on disk; the warning does not claim rollback.
-This status covers study data, not every preference or drill-session setting.
+This status covers study data, not every preference or active drill-session setting.
 Backup v1 and Apply/Cancel replacement behavior are unchanged.
 
-Focused persistence checks: `npm run test:storage`.
+Focused checks: `npm run test:storage` and `npm run test:backup-history`.
