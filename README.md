@@ -297,3 +297,15 @@ Disciplined next steps:
 
 See [`docs/roadmap.md`](docs/roadmap.md) for more detail.
 See [`docs/case-study.md`](docs/case-study.md) for a portfolio-style product narrative.
+
+## Preview a backup replacement
+
+In Data → Backup and JSON export tools, choosing a backup validates it and
+shows the incoming saved-game and mistake-card counts. Your current data stays
+unchanged until **Apply replacement**. This replaces the library, cards and active
+game (including an unsaved draft); it does not merge records. **Cancel** discards
+the preview. You can export your current data before applying the replacement.
+Invalid or unreadable files leave current data unchanged and clear any older
+preview. Selecting another file or cancelling while it is being read prevents
+an older read from restoring a stale preview. Backup format v1 and the existing
+replacement handler are unchanged; Apply validates the selected JSON again.
