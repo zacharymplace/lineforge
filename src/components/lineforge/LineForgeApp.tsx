@@ -72,9 +72,7 @@ import {
   loadStoredCards,
   loadStoredGame,
   loadStoredLibrary,
-  saveStoredCards,
-  saveStoredGame,
-  saveStoredLibrary,
+  saveStudyData,
   consumeStorageWarnings,
 } from "@/lib/move-ledger/storage";
 import type {
@@ -136,6 +134,13 @@ export function LineForgeApp() {
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowSection>("play");
   const [storageMessages, setStorageMessages] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [saveAttempt, setSaveAttempt] = useState(0);
+  const [localSave, setLocalSave] = useState<{
+    game: LineForgeGame; library: MoveLedgerLibrary; cards: MistakeCard[];
+    attempt: number; saved: boolean;
+  } | null>(null);
+  const saveIsCurrent = localSave?.game === game && localSave?.library === library &&
+    localSave?.cards === cards && localSave?.attempt === saveAttempt;
 
   useEffect(() => {
     const storedLibrary = loadStoredLibrary();
@@ -163,22 +168,14 @@ export function LineForgeApp() {
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      saveStoredGame(game);
-    }
-  }, [game, hydrated]);
-
-  useEffect(() => {
-    if (hydrated) {
-      saveStoredLibrary(library);
-    }
-  }, [library, hydrated]);
-
-  useEffect(() => {
-    if (hydrated) {
-      saveStoredCards(cards);
-    }
-  }, [cards, hydrated]);
+    if (!hydrated) return;
+    const result = saveStudyData(game, library, cards);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setLocalSave({ game, library, cards, attempt: saveAttempt, saved: result.saved });
+    });
+    return () => { active = false; };
+  }, [game, library, cards, hydrated, saveAttempt]);
 
   const replayChess = useMemo(() => loadGameAtPly(game, currentPly), [game, currentPly]);
   const stats = useMemo(() => calculateMistakeStats(cards), [cards]);
@@ -552,6 +549,18 @@ export function LineForgeApp() {
                 {message}
               </span>
             ))}
+          </div>
+          <div aria-label="Local study data save status" className="text-sm">
+            <p role={saveIsCurrent && !localSave?.saved ? "alert" : "status"}>
+              {!hydrated ? "Loading local study data…" : !saveIsCurrent ? "Saving study data locally…" :
+                localSave?.saved ? "Study data saved locally in this browser." :
+                "Study data not fully saved. Keep this tab open and export a backup from Data. Some local records may have saved; reloading could restore a mixed or older set."}
+            </p>
+            {saveIsCurrent && !localSave?.saved && (
+              <button className="lf-button-secondary mt-2" onClick={() => setSaveAttempt((attempt) => attempt + 1)}>
+                Retry local save
+              </button>
+            )}
           </div>
           <nav
             className="-mx-3 mt-2 flex gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0"

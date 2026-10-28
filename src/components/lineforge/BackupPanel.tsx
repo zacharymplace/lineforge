@@ -71,7 +71,7 @@ export function BackupPanel({ onExport, onImport }: BackupPanelProps) {
     if (!preview || reading) return;
     // Keep the existing import handler's validation and replacement semantics.
     const error = onImport(preview.json);
-    setMessage(error ?? "Backup imported. Current study data was replaced.");
+    setMessage(error ?? "Backup applied to this tab. Check the local save status above before closing or reloading.");
     setIsError(Boolean(error));
     if (!error) setPreview(null);
   }

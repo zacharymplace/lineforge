@@ -309,3 +309,19 @@ Invalid or unreadable files leave current data unchanged and clear any older
 preview. Selecting another file or cancelling while it is being read prevents
 an older read from restoring a stale preview. Backup format v1 and the existing
 replacement handler are unchanged; Apply validates the selected JSON again.
+
+### Local study-data save status
+
+The header separately reports whether the current game, library and mistake cards
+were saved in this browser. A restored backup is first applied to the current tab;
+check this status before closing it. If browser storage is full or unavailable,
+data remains in memory: keep the tab open, export a backup from Data, and use
+**Retry local save** after resolving the storage problem. Later study-data changes
+also retry saving. A successful retry clears the failure status.
+
+These three existing storage keys are written separately, not atomically. A failed
+save can leave mixed or older records on disk; the warning does not claim rollback.
+This status covers study data, not every preference or drill-session setting.
+Backup v1 and Apply/Cancel replacement behavior are unchanged.
+
+Focused persistence checks: `npm run test:storage`.

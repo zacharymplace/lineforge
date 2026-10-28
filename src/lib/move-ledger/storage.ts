@@ -30,12 +30,24 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJson<T>(key: string, value: T) {
-  if (typeof window === "undefined") {
-    return;
-  }
+export type StorageWriteResult = { saved: boolean; failedKeys: string[] };
 
-  window.localStorage.setItem(key, JSON.stringify(value));
+function writeJson<T>(key: string, value: T): StorageWriteResult {
+  try {
+    if (typeof window === "undefined") return { saved: false, failedKeys: [key] };
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return { saved: true, failedKeys: [] };
+  } catch {
+    // Keep the current in-memory data available for export and retry.
+    return { saved: false, failedKeys: [key] };
+  }
+}
+
+/** Separate storage keys are not an atomic transaction; try every write. */
+export function saveStudyData(game: LineForgeGame, library: MoveLedgerLibrary, cards: MistakeCard[]): StorageWriteResult {
+  const results = [saveStoredGame(game), saveStoredLibrary(library), saveStoredCards(cards)];
+  const failedKeys = results.flatMap((result) => result.failedKeys);
+  return { saved: failedKeys.length === 0, failedKeys };
 }
 
 export function loadStoredGame() {
@@ -43,7 +55,7 @@ export function loadStoredGame() {
 }
 
 export function saveStoredGame(game: LineForgeGame) {
-  writeJson(GAME_KEY, game);
+  return writeJson(GAME_KEY, game);
 }
 
 export function loadStoredLibrary(): MoveLedgerLibrary {
@@ -60,7 +72,7 @@ export function loadStoredLibrary(): MoveLedgerLibrary {
 }
 
 export function saveStoredLibrary(library: MoveLedgerLibrary) {
-  writeJson(LIBRARY_KEY, library);
+  return writeJson(LIBRARY_KEY, library);
 }
 
 export function loadStoredCards() {
@@ -68,7 +80,7 @@ export function loadStoredCards() {
 }
 
 export function saveStoredCards(cards: MistakeCard[]) {
-  writeJson(CARDS_KEY, cards);
+  return writeJson(CARDS_KEY, cards);
 }
 
 export function consumeStorageWarnings() {
