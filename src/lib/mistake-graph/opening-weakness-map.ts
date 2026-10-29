@@ -152,10 +152,22 @@ export function buildFilteredOpeningWeaknessMap(
   openingMap: OpeningWeaknessMap,
   filter: OpeningWeaknessFilter,
 ): OpeningWeaknessMap {
-  return buildOpeningWeaknessMapFromSignals(
+  const filtered = buildOpeningWeaknessMapFromSignals(
     filterOpeningWeaknessSignals(openingMap.signals, filter),
     openingMap.openingPhaseMaxPly,
   );
+  if (filtered.signals.length === 0) {
+    const message = openingMap.signals.length === 0
+      ? "No opening cards saved yet."
+      : filter.reviewState === "missed-only"
+        ? "No opening cards with missed reviews match these filters."
+        : "No opening cards match these filters.";
+    filtered.summary.reviewEvidence = `${message} Across all opening cards: ${openingMap.summary.reviewEvidence}`;
+    filtered.summary.recommendedNextReviewFocus = openingMap.signals.length === 0
+      ? "Create opening cards to start reviewing."
+      : "Switch to All opening cards or reset filters to see your saved cards.";
+  }
+  return filtered;
 }
 
 export function summarizeOpeningWeaknessFilter(

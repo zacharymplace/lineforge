@@ -232,7 +232,11 @@ export function OpeningWeaknessMapPanel({
 
       {filteredMap.buckets.length === 0 ? (
         <div className="bg-paper-2 p-3 text-sm text-ink-muted">
-          No opening-phase mistake cards match these filters.
+          {openingMap.signals.length === 0
+            ? "No opening cards saved yet."
+            : filter.reviewState === "missed-only"
+              ? "No opening cards with missed reviews match these filters. Your saved cards and review history are unchanged."
+              : "No opening cards match these filters. Your saved cards and review history are unchanged."}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(220px,320px)_1fr]">
