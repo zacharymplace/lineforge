@@ -127,10 +127,11 @@ export function OpeningWeaknessMapPanel({
         </p>
       </div>
 
+      <p className="text-sm text-ink-muted">{filteredMap.summary.reviewEvidence} Recall and correction cards count separately.</p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Opening cards" value={filteredMap.summary.totalOpeningCards} />
         <Metric
-          label="Top weakness"
+          label="Most frequent grouping"
           value={filteredMap.summary.strongestBucket?.label ?? "None"}
         />
         <Metric

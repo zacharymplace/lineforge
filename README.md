@@ -331,3 +331,14 @@ This status covers study data, not every preference or active drill-session sett
 Backup v1 and Apply/Cancel replacement behavior are unchanged.
 
 Focused checks: `npm run test:storage` and `npm run test:backup-history`.
+
+### Card frequency versus review evidence
+
+Weaknesses shows the most frequent saved card grouping separately from buckets
+with missed review attempts. A Blunder verdict describes the saved move, not a
+failed review. Recall and correction cards count separately. With no misses,
+Most missed is None; no-attempt and skip-only histories do not imply failures.
+Successful recall does not establish playing strength. Groupings remain available
+for practice, and filters recompute the evidence for the visible cards.
+
+Focused checks: `npm run test:weakness-evidence`.

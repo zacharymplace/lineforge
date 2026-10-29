@@ -50,7 +50,9 @@ export type OpeningWeaknessBucket = {
 
 export type OpeningWeaknessSummary = {
   totalOpeningCards: number;
+  /** Most frequent card grouping, not evidence of missed reviews. */
   strongestBucket?: OpeningWeaknessBucket;
+  reviewEvidence: string;
   mostMissedBucket?: OpeningWeaknessBucket;
   topRecurringTags: Array<{ tag: MistakeTag; count: number }>;
   recommendedNextReviewFocus: string;
@@ -186,7 +188,7 @@ function buildOpeningWeaknessMapFromSignals(
     openingPhaseMaxPly,
     signals,
     buckets: activeBuckets,
-    summary: buildOpeningWeaknessSummary(signals.length, activeBuckets),
+    summary: buildOpeningWeaknessSummary(signals, activeBuckets),
   };
 }
 
@@ -235,15 +237,22 @@ function buildOpeningWeaknessBucket(
 }
 
 function buildOpeningWeaknessSummary(
-  totalOpeningCards: number,
+  signals: OpeningWeaknessSignal[],
   buckets: OpeningWeaknessBucket[],
 ): OpeningWeaknessSummary {
   const strongestBucket = [...buckets].sort((a, b) => b.count - a.count || b.missed - a.missed)[0];
-  const mostMissedBucket = [...buckets].sort((a, b) => b.missed - a.missed || b.count - a.count)[0];
+  const mostMissedBucket = buckets.filter(bucket => bucket.missed > 0).sort((a, b) => b.missed - a.missed || b.count - a.count)[0];
   const topRecurringTags = getTopTags(buckets.flatMap((bucket) => bucket.signals));
 
+  const attempts = signals.reduce((sum, signal) => sum + signal.attempts, 0);
+  const misses = signals.reduce((sum, signal) => sum + signal.missed, 0);
   return {
-    totalOpeningCards,
+    totalOpeningCards: signals.length,
+    reviewEvidence: attempts === 0
+      ? "No review attempts yet; card frequency alone does not establish a review weakness."
+      : misses === 0
+        ? `No missed reviews recorded across ${attempts} attempts. Card frequency is not a demonstrated review weakness.`
+        : `${misses} missed reviews across ${attempts} attempts. Misses are review evidence, not a measure of playing strength.`,
     strongestBucket,
     mostMissedBucket,
     topRecurringTags,
@@ -303,7 +312,7 @@ function getSummaryRecommendation(
   }
 
   if (strongestBucket) {
-    return `Review ${strongestBucket.label.toLowerCase()} cards as your current opening pattern.`;
+    return `Most frequent grouping: ${strongestBucket.label.toLowerCase()}. Keep it in rotation; frequency alone does not establish a review weakness.`;
   }
 
   return "Create early-game mistake cards to reveal opening patterns.";

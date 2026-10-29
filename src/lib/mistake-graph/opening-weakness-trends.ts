@@ -217,8 +217,9 @@ function toTrendBucket(points: OpeningWeaknessTrendPoint[]): OpeningWeaknessTren
   const missed = points.reduce((total, point) => total + point.missed, 0);
   const skipped = points.reduce((total, point) => total + point.skipped, 0);
   const successRate = remembered + missed > 0 ? Math.round((remembered / (remembered + missed)) * 100) : 0;
-  const firstSuccessRate = getComparableSuccessRate(points[0]);
-  const recentSuccessRate = getComparableSuccessRate(points.at(-1));
+  const scoredPoints = points.filter(point => point.remembered + point.missed > 0);
+  const firstSuccessRate = getComparableSuccessRate(scoredPoints[0]);
+  const recentSuccessRate = getComparableSuccessRate(scoredPoints.at(-1));
 
   return {
     bucketId: points[0].bucketId,
@@ -250,7 +251,7 @@ function buildTrendSummary(
     .filter((bucket) => bucket.successRateDelta < 0)
     .sort((a, b) => a.successRateDelta - b.successRateDelta || b.reviewed - a.reviewed)[0];
   const mostReviewedBucket = [...buckets].sort((a, b) => b.reviewed - a.reviewed)[0];
-  const mostMissedBucket = [...buckets].sort((a, b) => b.missed - a.missed || b.reviewed - a.reviewed)[0];
+  const mostMissedBucket = buckets.filter(bucket => bucket.missed > 0).sort((a, b) => b.missed - a.missed || b.reviewed - a.reviewed)[0];
 
   return {
     totalReviewed: points.reduce((total, point) => total + point.reviewed, 0),
@@ -280,11 +281,11 @@ function getRecommendedFocus(
     return `Based on local review history, ${worseningBucket.bucketLabel.toLowerCase()} is trending down.`;
   }
 
-  if (mostReviewedBucket) {
-    return `Based on local review history, keep ${mostReviewedBucket.bucketLabel.toLowerCase()} in rotation.`;
+  if (mostReviewedBucket && mostReviewedBucket.remembered > 0) {
+    return "No missed reviews recorded. Keep reviewed cards in rotation; successful recall does not establish playing strength.";
   }
 
-  return "Review opening cards to build a local trend history.";
+  return "No scored review attempts yet. Review opening cards to build a local trend history; skipped cards are not misses.";
 }
 
 function getComparableSuccessRate(point: OpeningWeaknessTrendPoint | undefined) {

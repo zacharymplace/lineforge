@@ -34,7 +34,7 @@ export function MistakeDashboard({
     <section className="grid gap-4 border-[1.5px] border-ink bg-paper-2 p-4">
       <div>
         <h2 className="text-lg font-semibold text-ink">MistakeGraph</h2>
-        <p className="text-sm text-ink-muted">A compact view of your recurring patterns.</p>
+        <p className="text-sm text-ink-muted">Card frequency and review results, shown separately. Recall and correction cards count separately; labels describe saved moves, not review failures.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -97,10 +97,11 @@ export function MistakeDashboard({
         <div>
           <div className="text-sm font-medium text-ink">Opening weakness map</div>
           <div className="text-xs text-ink-muted">
-            {openingMap.summary.totalOpeningCards} opening cards · top weakness{" "}
+            {openingMap.summary.totalOpeningCards} opening cards · most frequent grouping{" "}
             {openingMap.summary.strongestBucket?.label ?? "none"}
           </div>
         </div>
+        <p className="text-sm text-ink-muted">{openingMap.summary.reviewEvidence}</p>
         <div className="bg-paper px-3 py-2 text-sm text-ink-2">
           <span className="text-ink-muted">Next focus: </span>
           {openingMap.summary.recommendedNextReviewFocus}
